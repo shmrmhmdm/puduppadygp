@@ -1,12 +1,11 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { MapPin, ChevronDown, UserCheck, Search, X, Users } from 'lucide-react';
+import { MapPin, ChevronDown, Search, X } from 'lucide-react';
 
 export default function WardSelector({ 
   selectedWard, 
   onSelectWard, 
   wardStats,
-  beneficiaries = [],
-  users = []
+  beneficiaries = []
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -23,11 +22,10 @@ export default function WardSelector({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Dynamically extract all distinct wards from beneficiaries and users data
+  // Dynamically extract all distinct wards from Beneficiaries sheet (Col F: Ward)
   const dynamicWardsList = useMemo(() => {
     const wardMap = new Map();
 
-    // 1. Collect all distinct wards from Beneficiaries sheet (Col F: Ward)
     beneficiaries.forEach((b) => {
       const wId = b.ward;
       if (wId !== undefined && wId !== null && String(wId).trim() !== '') {
@@ -37,8 +35,6 @@ export default function WardSelector({
             id: numId,
             name_ml: `വാർഡ് ${numId}`,
             name_en: `Ward ${numId}`,
-            member_ml: '',
-            member_en: '',
             count: 0,
           });
         }
@@ -46,38 +42,13 @@ export default function WardSelector({
       }
     });
 
-    // 2. Collect & Match Ward Members from Users sheet
-    users.forEach((u) => {
-      const uWard = String(u.ward || '').trim();
-      if (uWard && uWard !== 'All') {
-        const numId = Number(uWard) || uWard;
-        if (!wardMap.has(String(numId))) {
-          wardMap.set(String(numId), {
-            id: numId,
-            name_ml: `വാർഡ് ${numId}`,
-            name_en: `Ward ${numId}`,
-            member_ml: u.name || '',
-            member_en: '',
-            count: 0,
-          });
-        } else {
-          const entry = wardMap.get(String(numId));
-          if (u.name && (!entry.member_ml || u.role === 'Ward Member')) {
-            entry.member_ml = u.name;
-          }
-        }
-      }
-    });
-
-    // If still empty (e.g. before initial fetch), generate fallback 1 to 24
+    // Fallback 1 to 24 if no beneficiaries loaded yet
     if (wardMap.size === 0) {
       for (let i = 1; i <= 24; i++) {
         wardMap.set(String(i), {
           id: i,
           name_ml: `വാർഡ് ${i}`,
           name_en: `Ward ${i}`,
-          member_ml: '',
-          member_en: '',
           count: 0,
         });
       }
@@ -90,7 +61,7 @@ export default function WardSelector({
       if (!isNaN(aNum) && !isNaN(bNum)) return aNum - bNum;
       return String(a.id).localeCompare(String(b.id));
     });
-  }, [beneficiaries, users]);
+  }, [beneficiaries]);
 
   // Current selected ward information
   const currentWardInfo = useMemo(() => {
@@ -99,8 +70,6 @@ export default function WardSelector({
         id: 'all',
         name_ml: 'എല്ലാ വാർഡുകളും (All Wards)',
         name_en: 'All Wards Consolidated',
-        member_ml: 'ഗ്രാമപഞ്ചായത്ത് സമിതി',
-        member_en: 'Grama Panchayat Committee',
       };
     }
     const found = dynamicWardsList.find((w) => String(w.id) === String(selectedWard));
@@ -110,8 +79,6 @@ export default function WardSelector({
       id: selectedWard,
       name_ml: `വാർഡ് ${selectedWard}`,
       name_en: `Ward ${selectedWard}`,
-      member_ml: '',
-      member_en: '',
     };
   }, [selectedWard, dynamicWardsList]);
 
@@ -122,7 +89,6 @@ export default function WardSelector({
     return (
       ward.name_ml.toLowerCase().includes(term) ||
       ward.name_en.toLowerCase().includes(term) ||
-      (ward.member_ml && ward.member_ml.toLowerCase().includes(term)) ||
       String(ward.id).includes(term)
     );
   });
@@ -155,29 +121,15 @@ export default function WardSelector({
                   {currentWardInfo.name_ml}
                 </span>
                 <span className="text-xs font-semibold text-slate-500 block truncate">
-                  {currentWardInfo.member_ml ? `മെമ്പർ: ${currentWardInfo.member_ml}` : currentWardInfo.name_en}
+                  {currentWardInfo.name_en}
                 </span>
               </div>
-              <div className="flex items-center gap-1 shrink-0 bg-emerald-100/90 text-emerald-900 px-2.5 py-1.5 rounded-xl font-bold text-xs">
+              <div className="flex items-center gap-1 shrink-0 bg-emerald-100/90 text-emerald-900 px-3 py-1.5 rounded-xl font-bold text-xs">
                 <span>വാർഡ് മാറ്റുക</span>
                 <ChevronDown className={`w-4 h-4 text-emerald-800 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
               </div>
             </button>
           </div>
-
-          {/* Elected Ward Member Badge */}
-          {currentWardInfo.member_ml && (
-            <div className="sm:border-l sm:border-emerald-200 sm:pl-4 flex items-center gap-2.5 bg-white/90 p-2.5 rounded-2xl border border-emerald-200/80 shrink-0 shadow-2xs">
-              <div className="w-10 h-10 rounded-xl bg-emerald-700 text-white flex items-center justify-center shrink-0 shadow-xs">
-                <UserCheck className="w-5 h-5 text-emerald-100" />
-              </div>
-              <div className="text-xs">
-                <span className="text-[10px] font-bold text-emerald-800 uppercase block tracking-wider">വാർഡ് മെമ്പർ</span>
-                <span className="font-black text-slate-900 text-xs sm:text-sm block">{currentWardInfo.member_ml}</span>
-                <span className="text-[10px] text-slate-500 block">{currentWardInfo.name_ml}</span>
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
@@ -192,7 +144,7 @@ export default function WardSelector({
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="വാർഡ് നമ്പറോ മെമ്പറുടെ പേരോ തിരയുക..."
+                placeholder="വാർഡ് നമ്പർ തിരയുക (Search ward)..."
                 className="w-full pl-9 pr-8 py-2 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-800 placeholder-slate-400"
                 autoFocus
               />
@@ -248,8 +200,8 @@ export default function WardSelector({
                     <span className="block font-bold text-sm">
                       {ward.name_ml}
                     </span>
-                    <span className={`block text-[11px] truncate ${isSelected ? 'text-emerald-100' : 'text-slate-500'}`}>
-                      {ward.member_ml ? `മെമ്പർ: ${ward.member_ml}` : ward.name_en}
+                    <span className={`block text-[11px] ${isSelected ? 'text-emerald-100' : 'text-slate-500'}`}>
+                      {ward.name_en}
                     </span>
                   </div>
 

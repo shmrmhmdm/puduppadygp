@@ -7,6 +7,7 @@ import {
   Loader2,
   Lock
 } from 'lucide-react';
+import { fetchBeneficiaries } from '../services/api';
 
 export default function LoginScreen({ 
   users = [], 
@@ -24,7 +25,7 @@ export default function LoginScreen({
     }
   };
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     const cleanMobile = mobileInput.trim();
 
@@ -41,28 +42,44 @@ export default function LoginScreen({
     setIsLoading(true);
     setErrorMsg('');
 
-    setTimeout(() => {
-      // Find user in registered users list from Google Sheet
-      const foundUser = users.find((u) => {
+    try {
+      // 1. Check local/passed users list first
+      let currentUsers = users;
+      let foundUser = currentUsers.find((u) => {
         const uClean = String(u.mobile || '').replace(/\D/g, '');
         return uClean === cleanMobile;
       });
 
+      // 2. If not found in cache or list is empty, fetch fresh from Google Sheet live
+      if (!foundUser) {
+        const freshRes = await fetchBeneficiaries(true);
+        if (freshRes && freshRes.users && freshRes.users.length > 0) {
+          currentUsers = freshRes.users;
+          foundUser = currentUsers.find((u) => {
+            const uClean = String(u.mobile || '').replace(/\D/g, '');
+            return uClean === cleanMobile;
+          });
+        }
+      }
+
       if (foundUser) {
         onLoginSuccess(foundUser);
       } else {
-        if (users.length === 0) {
+        if (currentUsers.length === 0) {
           setErrorMsg(
-            'Google Sheet-ലെ "Users" ഷീറ്റിൽ വിവരങ്ങൾ ലഭ്യമല്ല. ദയവായി Google Sheet-ൽ നിങ്ങളുടെ മൊബൈൽ നമ്പർ ചേർക്കുക.'
+            'Google Sheet-ലെ "Users" ഷീറ്റിൽ വിവരങ്ങൾ ലഭ്യമായിട്ടില്ല. ദയവായി Google Sheet-ൽ നിങ്ങളുടെ മൊബൈൽ നമ്പർ ചേർക്കുക.'
           );
         } else {
           setErrorMsg(
-            'ഈ മൊബൈൽ നമ്പർ രജിസ്റ്റർ ചെയ്തിട്ടില്ല! ദയവായി പരിശോധിക്കുക.'
+            `"${cleanMobile}" എന്ന മൊബൈൽ നമ്പർ Google Sheet-ൽ രജിസ്റ്റർ ചെയ്തിട്ടില്ല! ദയവായി പരിശോധിക്കുക.`
           );
         }
       }
+    } catch (err) {
+      setErrorMsg('ലോഗിൻ പരിശോധിക്കുന്നതിൽ തടസ്സം നേരിട്ടു: ' + err.message);
+    } finally {
       setIsLoading(false);
-    }, 350);
+    }
   };
 
   return (

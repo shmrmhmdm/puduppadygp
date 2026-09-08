@@ -10,8 +10,8 @@ export default function ExportModal({
 }) {
   if (!isOpen) return null;
 
-  const wardInfo = WARDS_LIST.find((w) => w.id === selectedWard) || {
-    name_ml: selectedWard === 'all' ? 'എല്ലാ വാർഡുകളും' : `വാർഡ് ${selectedWard}`,
+  const wardInfo = {
+    name_ml: selectedWard === 'all' ? 'എല്ലാ വാർഡുകളും (All Wards)' : `വാർഡ് ${selectedWard}`,
     name_en: selectedWard === 'all' ? 'All Wards' : `Ward ${selectedWard}`,
   };
 

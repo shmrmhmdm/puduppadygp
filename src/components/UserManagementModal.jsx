@@ -190,9 +190,9 @@ export default function UserManagementModal({
                     className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs sm:text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-slate-100 disabled:text-slate-400"
                   >
                     <option value="All">എല്ലാ വാർഡുകളും (All)</option>
-                    {WARDS_LIST.map((w) => (
-                      <option key={w.id} value={w.id}>
-                        {w.name_ml} ({w.name_en})
+                    {Array.from({ length: 25 }, (_, i) => i + 1).map((wNum) => (
+                      <option key={wNum} value={wNum}>
+                        വാർഡ് {wNum} (Ward {wNum})
                       </option>
                     ))}
                   </select>

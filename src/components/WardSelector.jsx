@@ -1,19 +1,16 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { WARDS_LIST } from '../services/mockData';
-import { MapPin, ChevronDown, UserCheck, Search, X } from 'lucide-react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { MapPin, ChevronDown, UserCheck, Search, X, Users } from 'lucide-react';
 
-export default function WardSelector({ selectedWard, onSelectWard, wardStats }) {
+export default function WardSelector({ 
+  selectedWard, 
+  onSelectWard, 
+  wardStats,
+  beneficiaries = [],
+  users = []
+}) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const dropdownRef = useRef(null);
-
-  const currentWardInfo = WARDS_LIST.find((w) => w.id === selectedWard) || {
-    id: selectedWard,
-    name_ml: selectedWard === 'all' ? 'എല്ലാ വാർഡുകളും (All Wards)' : `വാർഡ് ${selectedWard}`,
-    name_en: selectedWard === 'all' ? 'All Wards' : `Ward ${selectedWard}`,
-    member_ml: 'ഗ്രാമപഞ്ചായത്ത് സമിതി',
-    member_en: 'Grama Panchayat Committee',
-  };
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -26,13 +23,107 @@ export default function WardSelector({ selectedWard, onSelectWard, wardStats }) 
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const filteredWards = WARDS_LIST.filter((ward) => {
-    const term = searchTerm.toLowerCase();
+  // Dynamically extract all distinct wards from beneficiaries and users data
+  const dynamicWardsList = useMemo(() => {
+    const wardMap = new Map();
+
+    // 1. Collect all distinct wards from Beneficiaries sheet (Col F: Ward)
+    beneficiaries.forEach((b) => {
+      const wId = b.ward;
+      if (wId !== undefined && wId !== null && String(wId).trim() !== '') {
+        const numId = Number(wId) || String(wId).trim();
+        if (!wardMap.has(String(numId))) {
+          wardMap.set(String(numId), {
+            id: numId,
+            name_ml: `വാർഡ് ${numId}`,
+            name_en: `Ward ${numId}`,
+            member_ml: '',
+            member_en: '',
+            count: 0,
+          });
+        }
+        wardMap.get(String(numId)).count += 1;
+      }
+    });
+
+    // 2. Collect & Match Ward Members from Users sheet
+    users.forEach((u) => {
+      const uWard = String(u.ward || '').trim();
+      if (uWard && uWard !== 'All') {
+        const numId = Number(uWard) || uWard;
+        if (!wardMap.has(String(numId))) {
+          wardMap.set(String(numId), {
+            id: numId,
+            name_ml: `വാർഡ് ${numId}`,
+            name_en: `Ward ${numId}`,
+            member_ml: u.name || '',
+            member_en: '',
+            count: 0,
+          });
+        } else {
+          const entry = wardMap.get(String(numId));
+          if (u.name && (!entry.member_ml || u.role === 'Ward Member')) {
+            entry.member_ml = u.name;
+          }
+        }
+      }
+    });
+
+    // If still empty (e.g. before initial fetch), generate fallback 1 to 24
+    if (wardMap.size === 0) {
+      for (let i = 1; i <= 24; i++) {
+        wardMap.set(String(i), {
+          id: i,
+          name_ml: `വാർഡ് ${i}`,
+          name_en: `Ward ${i}`,
+          member_ml: '',
+          member_en: '',
+          count: 0,
+        });
+      }
+    }
+
+    // Sort numerically by Ward ID
+    return Array.from(wardMap.values()).sort((a, b) => {
+      const aNum = Number(a.id);
+      const bNum = Number(b.id);
+      if (!isNaN(aNum) && !isNaN(bNum)) return aNum - bNum;
+      return String(a.id).localeCompare(String(b.id));
+    });
+  }, [beneficiaries, users]);
+
+  // Current selected ward information
+  const currentWardInfo = useMemo(() => {
+    if (selectedWard === 'all') {
+      return {
+        id: 'all',
+        name_ml: 'എല്ലാ വാർഡുകളും (All Wards)',
+        name_en: 'All Wards Consolidated',
+        member_ml: 'ഗ്രാമപഞ്ചായത്ത് സമിതി',
+        member_en: 'Grama Panchayat Committee',
+      };
+    }
+    const found = dynamicWardsList.find((w) => String(w.id) === String(selectedWard));
+    if (found) return found;
+
+    return {
+      id: selectedWard,
+      name_ml: `വാർഡ് ${selectedWard}`,
+      name_en: `Ward ${selectedWard}`,
+      member_ml: '',
+      member_en: '',
+    };
+  }, [selectedWard, dynamicWardsList]);
+
+  // Filter wards in search box
+  const filteredWards = dynamicWardsList.filter((ward) => {
+    const term = searchTerm.toLowerCase().trim();
+    if (!term) return true;
     return (
       ward.name_ml.toLowerCase().includes(term) ||
       ward.name_en.toLowerCase().includes(term) ||
-      ward.member_ml.toLowerCase().includes(term) ||
-      ward.id.toString().includes(term)
+      (ward.member_ml && ward.member_ml.toLowerCase().includes(term)) ||
+      String(ward.id).includes(term)
     );
   });
 
@@ -64,11 +155,11 @@ export default function WardSelector({ selectedWard, onSelectWard, wardStats }) 
                   {currentWardInfo.name_ml}
                 </span>
                 <span className="text-xs font-semibold text-slate-500 block truncate">
-                  {currentWardInfo.name_en}
+                  {currentWardInfo.member_ml ? `മെമ്പർ: ${currentWardInfo.member_ml}` : currentWardInfo.name_en}
                 </span>
               </div>
-              <div className="flex items-center gap-1 shrink-0 bg-emerald-100/90 text-emerald-900 px-2 py-1 rounded-xl font-bold text-xs">
-                <span className="hidden sm:inline">മാറ്റുക</span>
+              <div className="flex items-center gap-1 shrink-0 bg-emerald-100/90 text-emerald-900 px-2.5 py-1.5 rounded-xl font-bold text-xs">
+                <span>വാർഡ് മാറ്റുക</span>
                 <ChevronDown className={`w-4 h-4 text-emerald-800 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
               </div>
             </button>
@@ -83,7 +174,7 @@ export default function WardSelector({ selectedWard, onSelectWard, wardStats }) 
               <div className="text-xs">
                 <span className="text-[10px] font-bold text-emerald-800 uppercase block tracking-wider">വാർഡ് മെമ്പർ</span>
                 <span className="font-black text-slate-900 text-xs sm:text-sm block">{currentWardInfo.member_ml}</span>
-                <span className="text-[10px] text-slate-500 block">{currentWardInfo.member_en}</span>
+                <span className="text-[10px] text-slate-500 block">{currentWardInfo.name_ml}</span>
               </div>
             </div>
           )}
@@ -92,17 +183,17 @@ export default function WardSelector({ selectedWard, onSelectWard, wardStats }) 
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute left-0 right-0 top-full mt-2 bg-white rounded-2xl shadow-2xl border border-slate-200 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150 max-h-[380px] flex flex-col">
+        <div className="absolute left-0 right-0 top-full mt-2 bg-white rounded-3xl shadow-2xl border-2 border-emerald-500/40 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150 max-h-[380px] flex flex-col">
           {/* Quick Search Header */}
-          <div className="p-3 border-b border-slate-100 bg-slate-50/80 sticky top-0">
+          <div className="p-3 border-b border-slate-100 bg-slate-50/90 sticky top-0">
             <div className="relative">
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="വാർഡ് പേരോ നമ്പറോ തിരയുക (Search ward)..."
-                className="w-full pl-9 pr-8 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-800 placeholder-slate-400"
+                placeholder="വാർഡ് നമ്പറോ മെമ്പറുടെ പേരോ തിരയുക..."
+                className="w-full pl-9 pr-8 py-2 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-800 placeholder-slate-400"
                 autoFocus
               />
               {searchTerm && (
@@ -124,22 +215,22 @@ export default function WardSelector({ selectedWard, onSelectWard, wardStats }) 
                 onSelectWard('all');
                 setIsOpen(false);
               }}
-              className={`w-full text-left px-3.5 py-2.5 rounded-xl text-sm transition-colors flex items-center justify-between ${
+              className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs sm:text-sm transition-colors flex items-center justify-between cursor-pointer ${
                 selectedWard === 'all'
-                  ? 'bg-emerald-600 text-white font-semibold'
+                  ? 'bg-emerald-700 text-white font-black shadow-xs'
                   : 'hover:bg-slate-100 text-slate-800'
               }`}
             >
               <div>
-                <span className="block font-medium">എല്ലാ വാർഡുകളും ഒന്നിച്ചു കാണുക</span>
-                <span className={`block text-xs ${selectedWard === 'all' ? 'text-emerald-100' : 'text-slate-500'}`}>
-                  View All Wards (Consolidated)
+                <span className="block font-bold">എല്ലാ വാർഡുകളും ഒന്നിച്ചു കാണുക</span>
+                <span className={`block text-[11px] ${selectedWard === 'all' ? 'text-emerald-100' : 'text-slate-500'}`}>
+                  ആകെ ഗുണഭോക്താക്കൾ: {beneficiaries.length} പേർ
                 </span>
               </div>
             </button>
 
             {filteredWards.map((ward) => {
-              const isSelected = selectedWard === ward.id;
+              const isSelected = String(selectedWard) === String(ward.id);
               return (
                 <button
                   key={ward.id}
@@ -147,23 +238,26 @@ export default function WardSelector({ selectedWard, onSelectWard, wardStats }) 
                     onSelectWard(ward.id);
                     setIsOpen(false);
                   }}
-                  className={`w-full text-left px-3.5 py-2.5 rounded-xl text-sm transition-colors flex items-center justify-between ${
+                  className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs sm:text-sm transition-colors flex items-center justify-between cursor-pointer ${
                     isSelected
-                      ? 'bg-emerald-600 text-white font-semibold shadow-sm'
+                      ? 'bg-emerald-700 text-white font-black shadow-xs'
                       : 'hover:bg-slate-100 text-slate-800'
                   }`}
                 >
-                  <div>
-                    <span className="block font-medium">{ward.name_ml}</span>
-                    <span className={`block text-xs ${isSelected ? 'text-emerald-100' : 'text-slate-500'}`}>
-                      {ward.name_en} • മെമ്പർ: {ward.member_ml}
+                  <div className="truncate">
+                    <span className="block font-bold text-sm">
+                      {ward.name_ml}
+                    </span>
+                    <span className={`block text-[11px] truncate ${isSelected ? 'text-emerald-100' : 'text-slate-500'}`}>
+                      {ward.member_ml ? `മെമ്പർ: ${ward.member_ml}` : ward.name_en}
                     </span>
                   </div>
-                  {ward.id <= 3 && (
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${
-                      isSelected ? 'bg-emerald-700 text-emerald-100' : 'bg-slate-200 text-slate-700'
+
+                  {ward.count > 0 && (
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase shrink-0 ${
+                      isSelected ? 'bg-emerald-900 text-emerald-100' : 'bg-emerald-50 text-emerald-800 border border-emerald-200'
                     }`}>
-                      ഡാറ്റ ലഭ്യമാണ്
+                      {ward.count} രേഖകൾ
                     </span>
                   )}
                 </button>
@@ -171,8 +265,8 @@ export default function WardSelector({ selectedWard, onSelectWard, wardStats }) 
             })}
 
             {filteredWards.length === 0 && (
-              <div className="p-4 text-center text-sm text-slate-500">
-                വാർഡുകൾ കണ്ടെത്താനായില്ല (No wards found)
+              <div className="p-4 text-center text-xs text-slate-500">
+                വാർഡുകൾ കണ്ടെത്താനായില്ല
               </div>
             )}
           </div>

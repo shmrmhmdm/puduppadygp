@@ -246,19 +246,21 @@ export default function EmployeeSevanaQueue({
             )}
           </div>
 
-          {/* Ward Selector */}
+          {/* Dynamic Ward Selector */}
           <div>
             <select
               value={selectedWard}
               onChange={(e) => setSelectedWard(e.target.value)}
-              className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-800"
+              className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-800 cursor-pointer"
             >
               <option value="all">എല്ലാ വാർഡുകളും (All Wards)</option>
-              {WARDS_LIST.map((w) => (
-                <option key={w.id} value={w.id}>
-                  {w.name_ml} ({w.name_en})
-                </option>
-              ))}
+              {Array.from(new Set(beneficiaries.map((b) => b.ward).filter(Boolean)))
+                .sort((a, b) => Number(a) - Number(b))
+                .map((wardId) => (
+                  <option key={wardId} value={wardId}>
+                    വാർഡ് {wardId} (Ward {wardId})
+                  </option>
+                ))}
             </select>
           </div>
 

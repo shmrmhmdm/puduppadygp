@@ -449,11 +449,13 @@ export default function App() {
             ) : (
               /* View 2: Mobile Number Collection Portal */
               <>
-                {/* Ward Selector */}
+                {/* Dynamic Ward Selector */}
                 <WardSelector
                   selectedWard={selectedWard}
                   onSelectWard={setSelectedWard}
                   wardStats={wardStats}
+                  beneficiaries={beneficiaries}
+                  users={users}
                 />
 
                 {/* Ward Statistics Live Card */}

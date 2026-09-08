@@ -120,19 +120,23 @@ export default function BeneficiaryCard({
           </div>
         </div>
 
-        {/* House Name & Ward Info */}
+        {/* House Name & Address Full View */}
         {(beneficiary.house_name || showWard) && (
-          <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600 bg-slate-50 p-2 rounded-xl border border-slate-100">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 text-xs text-slate-700 bg-slate-50/90 p-2.5 rounded-xl border border-slate-200/80">
             {beneficiary.house_name && (
-              <div className="flex items-center gap-1.5 text-slate-700 font-medium truncate">
-                <Home className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                <span className="truncate">{beneficiary.house_name}</span>
+              <div className="flex items-start gap-1.5 font-medium text-slate-800 leading-snug">
+                <Home className="w-4 h-4 text-emerald-700 shrink-0 mt-0.5" />
+                <span className="break-words select-text">
+                  {beneficiary.house_name}
+                </span>
               </div>
             )}
             {showWard && (
-              <span className="text-[11px] font-bold text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 shrink-0">
-                വാർഡ് {beneficiary.ward}
-              </span>
+              <div className="shrink-0 self-start sm:self-auto">
+                <span className="text-[11px] font-bold text-emerald-800 bg-emerald-100/70 px-2 py-0.5 rounded-md border border-emerald-200">
+                  വാർഡ് {beneficiary.ward}
+                </span>
+              </div>
             )}
           </div>
         )}

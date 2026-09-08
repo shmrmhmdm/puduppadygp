@@ -39,12 +39,39 @@ export default function BeneficiaryList({
   // Active list based on tab
   const activeList = activeTab === 'pending' ? pendingList : completedList;
 
+  // Dynamic distinct schemes from Google Sheet 'Scheme Name' column
+  const availableSchemes = useMemo(() => {
+    const schemeMap = new Map();
+    beneficiaries.forEach((b) => {
+      const sName = (b.scheme_ml || b.scheme_name || b.scheme_en || '').trim();
+      if (sName) {
+        if (!schemeMap.has(sName)) {
+          schemeMap.set(sName, {
+            name: sName,
+            code: b.scheme_code || sName
+          });
+        }
+      }
+    });
+
+    const dynamicList = Array.from(schemeMap.values());
+    if (dynamicList.length > 0) {
+      return dynamicList;
+    }
+    return PENSION_SCHEMES.map(s => ({ name: s.short_ml || s.name_ml, code: s.id }));
+  }, [beneficiaries]);
+
   // Search and Scheme Filtering
   const filteredList = useMemo(() => {
     return activeList.filter((item) => {
-      // Scheme filter
-      if (selectedScheme !== 'all' && item.scheme_code !== selectedScheme) {
-        return false;
+      // Dynamic Scheme filter based on Sheet's Scheme Name or code
+      if (selectedScheme !== 'all') {
+        const itemSchemeName = (item.scheme_ml || item.scheme_name || '').trim().toLowerCase();
+        const itemSchemeCode = (item.scheme_code || '').trim().toLowerCase();
+        const target = selectedScheme.trim().toLowerCase();
+        if (itemSchemeName !== target && itemSchemeCode !== target) {
+          return false;
+        }
       }
 
       // Search query filter
@@ -151,9 +178,10 @@ export default function BeneficiaryList({
                 onChange={(e) => setSelectedScheme(e.target.value)}
                 className="w-full pl-9 pr-7 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:bg-white text-slate-800 appearance-none transition-all cursor-pointer"
               >
-                {PENSION_SCHEMES.map((scheme) => (
-                  <option key={scheme.id} value={scheme.id}>
-                    {scheme.short_ml || scheme.name_ml}
+                <option value="all">എല്ലാ പെൻഷനുകളും (All Schemes)</option>
+                {availableSchemes.map((scheme) => (
+                  <option key={scheme.name} value={scheme.name}>
+                    {scheme.name}
                   </option>
                 ))}
               </select>

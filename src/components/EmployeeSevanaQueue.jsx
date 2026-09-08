@@ -47,6 +47,28 @@ export default function EmployeeSevanaQueue({
     return completedBeneficiaries.filter((b) => b.sevana_status === 'synced');
   }, [completedBeneficiaries]);
 
+  // Dynamic distinct schemes from Google Sheet 'Scheme Name' column
+  const availableSchemes = useMemo(() => {
+    const schemeMap = new Map();
+    beneficiaries.forEach((b) => {
+      const sName = (b.scheme_ml || b.scheme_name || b.scheme_en || '').trim();
+      if (sName) {
+        if (!schemeMap.has(sName)) {
+          schemeMap.set(sName, {
+            name: sName,
+            code: b.scheme_code || sName
+          });
+        }
+      }
+    });
+
+    const dynamicList = Array.from(schemeMap.values());
+    if (dynamicList.length > 0) {
+      return dynamicList;
+    }
+    return PENSION_SCHEMES.map(s => ({ name: s.short_ml || s.name_ml, code: s.id }));
+  }, [beneficiaries]);
+
   // Filter based on active tab, ward, scheme, and search
   const filteredList = useMemo(() => {
     let list = activeTab === 'pending' 
@@ -60,7 +82,12 @@ export default function EmployeeSevanaQueue({
     }
 
     if (selectedScheme !== 'all') {
-      list = list.filter((b) => b.scheme_code === selectedScheme);
+      const target = selectedScheme.trim().toLowerCase();
+      list = list.filter((b) => {
+        const bSchemeName = (b.scheme_ml || b.scheme_name || '').trim().toLowerCase();
+        const bSchemeCode = (b.scheme_code || '').trim().toLowerCase();
+        return bSchemeName === target || bSchemeCode === target;
+      });
     }
 
     if (searchQuery.trim()) {
@@ -242,9 +269,10 @@ export default function EmployeeSevanaQueue({
               onChange={(e) => setSelectedScheme(e.target.value)}
               className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-800"
             >
-              {PENSION_SCHEMES.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.short_ml || s.name_ml}
+              <option value="all">എല്ലാ പെൻഷനുകളും (All Schemes)</option>
+              {availableSchemes.map((s) => (
+                <option key={s.name} value={s.name}>
+                  {s.name}
                 </option>
               ))}
             </select>

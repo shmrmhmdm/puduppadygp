@@ -4,14 +4,15 @@ import {
   Save, 
   CheckCircle2, 
   Edit3, 
-  User, 
   Home, 
   Loader2, 
   AlertCircle, 
   PhoneCall, 
   X,
   UserCheck,
-  Clock
+  Clock,
+  UserX,
+  RotateCcw
 } from 'lucide-react';
 import { PENSION_SCHEMES } from '../services/mockData';
 
@@ -19,13 +20,19 @@ export default function BeneficiaryCard({
   beneficiary, 
   activeTab, 
   onSaveMobile, 
+  onUpdateStatus,
   showWard = false,
   isReadOnly = false
 }) {
   const [mobileInput, setMobileInput] = useState(beneficiary.mobile_no || '');
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [showDeceasedConfirm, setShowDeceasedConfirm] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+
+  const isDeceased = beneficiary.status === 'deceased';
+  const isCompleted = beneficiary.status === 'completed' && beneficiary.mobile_no && !isDeceased;
+  const isPending = !isDeceased && (activeTab === 'pending' || (!beneficiary.mobile_no && !isEditing));
 
   // Find Scheme details
   const scheme = PENSION_SCHEMES.find((s) => s.id === beneficiary.scheme_code) || {
@@ -80,11 +87,40 @@ export default function BeneficiaryCard({
     setErrorMsg('');
   };
 
-  const isPending = activeTab === 'pending' || (!beneficiary.mobile_no && !isEditing);
+  const handleMarkDeceased = async () => {
+    if (!onUpdateStatus) return;
+    setIsSaving(true);
+    setErrorMsg('');
+    try {
+      await onUpdateStatus(beneficiary.beneficiary_id, 'deceased');
+      setShowDeceasedConfirm(false);
+      setIsEditing(false);
+    } catch (err) {
+      setErrorMsg('സ്റ്റാറ്റസ് അപ്ഡേറ്റ് ചെയ്യുന്നതിൽ തടസ്സം നേരിട്ടു.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleRevertToPending = async () => {
+    if (!onUpdateStatus) return;
+    setIsSaving(true);
+    setErrorMsg('');
+    try {
+      await onUpdateStatus(beneficiary.beneficiary_id, 'pending');
+      setIsEditing(true);
+    } catch (err) {
+      setErrorMsg('തിരുത്താൻ സാധിച്ചില്ല.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   return (
     <div className={`bg-white rounded-2xl shadow-sm border transition-all duration-200 overflow-hidden ${
-      isPending 
+      isDeceased
+        ? 'border-slate-300 bg-slate-50/50'
+        : isPending 
         ? 'border-slate-200/90 hover:border-emerald-600' 
         : 'border-emerald-200/90 bg-gradient-to-b from-white to-emerald-50/20'
     }`}>
@@ -94,9 +130,18 @@ export default function BeneficiaryCard({
           {beneficiary.scheme_ml || scheme.name_ml}
         </span>
 
-        <div className="flex items-center gap-1 text-[10px] sm:text-[11px] font-mono font-bold text-slate-600 bg-white px-2 py-0.5 rounded border border-slate-200 shrink-0">
-          <span className="text-slate-400">ID:</span>
-          <span>{beneficiary.beneficiary_id}</span>
+        <div className="flex items-center gap-1.5 shrink-0">
+          {isDeceased && (
+            <span className="px-2 py-0.5 rounded-full font-black text-[10px] sm:text-[11px] bg-rose-100 text-rose-800 border border-rose-300 flex items-center gap-1">
+              <UserX className="w-3 h-3 text-rose-600" />
+              <span>മരണപ്പെട്ടു</span>
+            </span>
+          )}
+
+          <div className="flex items-center gap-1 text-[10px] sm:text-[11px] font-mono font-bold text-slate-600 bg-white px-2 py-0.5 rounded border border-slate-200">
+            <span className="text-slate-400">ID:</span>
+            <span>{beneficiary.beneficiary_id}</span>
+          </div>
         </div>
       </div>
 
@@ -104,7 +149,7 @@ export default function BeneficiaryCard({
       <div className="p-3.5 sm:p-4 space-y-3">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <h3 className="text-base sm:text-lg font-bold text-slate-900 leading-snug">
+            <h3 className={`text-base sm:text-lg font-bold leading-snug ${isDeceased ? 'text-slate-600 line-through decoration-slate-400' : 'text-slate-900'}`}>
               {beneficiary.name_ml}
             </h3>
             {beneficiary.name_en && (
@@ -147,7 +192,12 @@ export default function BeneficiaryCard({
         {isReadOnly ? (
           /* Read Only Mode for Viewer Role */
           <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 flex items-center justify-between gap-2">
-            {isPending ? (
+            {isDeceased ? (
+              <div className="flex items-center gap-2 text-xs font-bold text-rose-800">
+                <UserX className="w-4 h-4 text-rose-600 shrink-0" />
+                <span>മരണപ്പെട്ടതായി രേഖപ്പെടുത്തിയിരിക്കുന്നു</span>
+              </div>
+            ) : isPending ? (
               <div className="flex items-center gap-2 text-xs font-bold text-amber-800">
                 <Clock className="w-4 h-4 text-amber-600 shrink-0" />
                 <span>മൊബൈൽ നമ്പർ ശേഖരിക്കാൻ ബാക്കിയുണ്ട് (Pending)</span>
@@ -179,12 +229,101 @@ export default function BeneficiaryCard({
               </div>
             )}
           </div>
+        ) : isDeceased ? (
+          /* Deceased State View */
+          <div className="bg-slate-100/90 border border-slate-300 rounded-xl p-3 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-full bg-rose-700 text-white flex items-center justify-center shrink-0 shadow-xs">
+                <UserX className="w-4 h-4" />
+              </div>
+              <div className="min-w-0">
+                <span className="text-xs font-bold text-slate-800 block">
+                  മരണപ്പെട്ടതായി രേഖപ്പെടുത്തി
+                </span>
+                {beneficiary.updated_by && (
+                  <span className="text-[10px] text-slate-500 flex items-center gap-1 mt-0.5 truncate">
+                    <UserCheck className="w-3 h-3 text-slate-400 shrink-0" />
+                    <span className="truncate">രേഖപ്പെടുത്തിയത്: <strong>{beneficiary.updated_by}</strong></span>
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleRevertToPending}
+              disabled={isSaving}
+              className="py-1.5 px-3 bg-white hover:bg-slate-200 border border-slate-300 rounded-xl text-xs font-bold text-slate-700 flex items-center justify-center gap-1.5 shadow-2xs transition-all cursor-pointer shrink-0"
+            >
+              {isSaving ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
+              )}
+              <span>തിരുത്തുക / ജീവിച്ചിരിപ്പുണ്ട്</span>
+            </button>
+          </div>
+        ) : showDeceasedConfirm ? (
+          /* Deceased Confirmation Prompt */
+          <div className="bg-rose-50 border border-rose-300 rounded-xl p-3 space-y-2.5 animate-in fade-in">
+            <div className="flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+              <p className="text-xs font-bold text-rose-950">
+                ഈ ഗുണഭോക്താവ് മരണപ്പെട്ടതായി രേഖപ്പെടുത്തട്ടെ?
+              </p>
+            </div>
+            <p className="text-[11px] text-rose-800">
+              ഇവർക്ക് മൊബൈൽ നമ്പർ രേഖപ്പെടുത്തേണ്ടതില്ല. സ്റ്റാറ്റസ് ഗൂഗിൾ ഷീറ്റിലേക്ക് രേഖപ്പെടുത്തപ്പെടും.
+            </p>
+            <div className="flex items-center justify-end gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setShowDeceasedConfirm(false)}
+                disabled={isSaving}
+                className="px-3 py-1.5 bg-white text-slate-700 hover:bg-slate-100 border border-slate-300 rounded-lg text-xs font-semibold"
+              >
+                റദ്ദാക്കുക
+              </button>
+              <button
+                type="button"
+                onClick={handleMarkDeceased}
+                disabled={isSaving}
+                className="px-3.5 py-1.5 bg-rose-700 hover:bg-rose-800 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-xs"
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>സേവ് ചെയ്യുന്നു...</span>
+                  </>
+                ) : (
+                  <>
+                    <UserX className="w-3.5 h-3.5" />
+                    <span>അതെ, മരണപ്പെട്ടു</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
         ) : isPending || isEditing ? (
           /* Mobile Input Form */
           <form onSubmit={handleSave} className="space-y-2 pt-1">
-            <label className="block text-xs font-bold text-slate-700">
-              10 അക്ക മൊബൈൽ നമ്പർ നൽകുക:
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="block text-xs font-bold text-slate-700">
+                10 അക്ക മൊബൈൽ നമ്പർ നൽകുക:
+              </label>
+
+              {/* Mark as Deceased Quick Button */}
+              {onUpdateStatus && (
+                <button
+                  type="button"
+                  onClick={() => setShowDeceasedConfirm(true)}
+                  className="text-[11px] font-bold text-rose-700 hover:text-rose-900 flex items-center gap-1 px-2 py-0.5 rounded-md hover:bg-rose-50 transition-colors"
+                >
+                  <UserX className="w-3 h-3 text-rose-600" />
+                  <span>മരണപ്പെട്ടതായി അടയാളപ്പെടുത്തുക</span>
+                </button>
+              )}
+            </div>
 
             <div className="flex flex-col sm:flex-row items-stretch gap-2">
               <div className="relative flex-1">
@@ -291,6 +430,17 @@ export default function BeneficiaryCard({
                 <Edit3 className="w-3.5 h-3.5 text-slate-500" />
                 <span>തിരുത്തുക</span>
               </button>
+
+              {onUpdateStatus && (
+                <button
+                  type="button"
+                  onClick={() => setShowDeceasedConfirm(true)}
+                  title="മരണപ്പെട്ടതായി അടയാളപ്പെടുത്തുക"
+                  className="py-2 px-2 text-rose-700 hover:bg-rose-100 border border-rose-200 rounded-xl text-xs font-bold flex items-center justify-center"
+                >
+                  <UserX className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
           </div>
         )}

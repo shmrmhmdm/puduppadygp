@@ -1,9 +1,12 @@
 import React from 'react';
-import { Users, CheckCircle2, Clock, Award } from 'lucide-react';
+import { Users, CheckCircle2, Clock, Award, UserX } from 'lucide-react';
 
-export default function WardStats({ total = 0, completed = 0, pending = 0 }) {
-  const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
-  const isAllComplete = total > 0 && pending === 0;
+export default function WardStats({ total = 0, completed = 0, pending = 0, deceased = 0 }) {
+  const targetTotal = total - deceased > 0 ? total - deceased : 0;
+  const percentage = targetTotal > 0 
+    ? Math.round((completed / targetTotal) * 100) 
+    : (total > 0 && deceased === total ? 100 : 0);
+  const isAllComplete = targetTotal > 0 && pending === 0;
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-slate-200/90 p-4 sm:p-5">
@@ -24,12 +27,12 @@ export default function WardStats({ total = 0, completed = 0, pending = 0 }) {
         </span>
       </div>
 
-      {/* 3 Metric Cards Grid */}
-      <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-4">
+      {/* 4 Metric Cards Grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mb-4">
         {/* Total */}
-        <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-2.5 sm:p-3.5 text-center transition-all hover:bg-slate-100/80">
-          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-slate-200 text-slate-700 mx-auto flex items-center justify-center mb-1 sm:mb-1.5">
-            <Users className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
+        <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-2.5 sm:p-3 text-center transition-all hover:bg-slate-100/80">
+          <div className="w-7 h-7 rounded-lg bg-slate-200 text-slate-700 mx-auto flex items-center justify-center mb-1">
+            <Users className="w-4 h-4" />
           </div>
           <div className="text-lg sm:text-2xl font-extrabold text-slate-900 tracking-tight leading-none">
             {total}
@@ -43,9 +46,9 @@ export default function WardStats({ total = 0, completed = 0, pending = 0 }) {
         </div>
 
         {/* Completed */}
-        <div className="bg-emerald-50/80 border border-emerald-200/80 rounded-xl p-2.5 sm:p-3.5 text-center transition-all hover:bg-emerald-100/60">
-          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-emerald-600 text-white mx-auto flex items-center justify-center mb-1 sm:mb-1.5 shadow-sm">
-            <CheckCircle2 className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
+        <div className="bg-emerald-50/80 border border-emerald-200/80 rounded-xl p-2.5 sm:p-3 text-center transition-all hover:bg-emerald-100/60">
+          <div className="w-7 h-7 rounded-lg bg-emerald-600 text-white mx-auto flex items-center justify-center mb-1 shadow-sm">
+            <CheckCircle2 className="w-4 h-4" />
           </div>
           <div className="text-lg sm:text-2xl font-extrabold text-emerald-800 tracking-tight leading-none">
             {completed}
@@ -58,10 +61,26 @@ export default function WardStats({ total = 0, completed = 0, pending = 0 }) {
           </div>
         </div>
 
+        {/* Deceased */}
+        <div className="bg-rose-50/80 border border-rose-200/80 rounded-xl p-2.5 sm:p-3 text-center transition-all hover:bg-rose-100/60">
+          <div className="w-7 h-7 rounded-lg bg-rose-600 text-white mx-auto flex items-center justify-center mb-1 shadow-sm">
+            <UserX className="w-4 h-4" />
+          </div>
+          <div className="text-lg sm:text-2xl font-extrabold text-rose-900 tracking-tight leading-none">
+            {deceased}
+          </div>
+          <div className="text-[11px] sm:text-xs font-bold text-rose-900 mt-1 line-clamp-1">
+            മരണപ്പെട്ടവർ
+          </div>
+          <div className="text-[9px] sm:text-[10px] text-rose-700 hidden sm:block">
+            Deceased Records
+          </div>
+        </div>
+
         {/* Pending */}
-        <div className="bg-amber-50/80 border border-amber-200/80 rounded-xl p-2.5 sm:p-3.5 text-center transition-all hover:bg-amber-100/60">
-          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-amber-600 text-white mx-auto flex items-center justify-center mb-1 sm:mb-1.5 shadow-sm">
-            <Clock className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
+        <div className="bg-amber-50/80 border border-amber-200/80 rounded-xl p-2.5 sm:p-3 text-center transition-all hover:bg-amber-100/60">
+          <div className="w-7 h-7 rounded-lg bg-amber-600 text-white mx-auto flex items-center justify-center mb-1 shadow-sm">
+            <Clock className="w-4 h-4" />
           </div>
           <div className="text-lg sm:text-2xl font-extrabold text-amber-900 tracking-tight leading-none">
             {pending}

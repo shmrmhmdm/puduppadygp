@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Download, Printer, FileText, CheckCircle2, Clock } from 'lucide-react';
+import { X, Download, Printer, FileText, CheckCircle2, Clock, UserX } from 'lucide-react';
 import { WARDS_LIST } from '../services/mockData';
 
 export default function ExportModal({ 
@@ -19,8 +19,9 @@ export default function ExportModal({
     ? beneficiaries 
     : beneficiaries.filter((b) => b.ward === Number(selectedWard));
 
-  const completedCount = wardData.filter((b) => b.status === 'completed' && b.mobile_no).length;
-  const pendingCount = wardData.length - completedCount;
+  const completedCount = wardData.filter((b) => b.status === 'completed' && b.mobile_no && b.status !== 'deceased').length;
+  const deceasedCount = wardData.filter((b) => b.status === 'deceased').length;
+  const pendingCount = wardData.length - completedCount - deceasedCount >= 0 ? wardData.length - completedCount - deceasedCount : 0;
 
   // Export to CSV Function
   const exportToCSV = () => {
@@ -111,21 +112,23 @@ export default function ExportModal({
               </span>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 text-xs">
-              <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 p-2.5 rounded-xl">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                <div>
-                  <span className="text-slate-500 block">പൂർത്തിയായത്:</span>
-                  <span className="font-bold text-emerald-800 text-sm">{completedCount} എണ്ണം</span>
-                </div>
+            <div className="grid grid-cols-3 gap-2 text-xs">
+              <div className="flex flex-col items-center text-center bg-emerald-50 border border-emerald-200 p-2 rounded-xl">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 mb-0.5" />
+                <span className="text-[10px] text-slate-500 block">പൂർത്തിയായത്</span>
+                <span className="font-bold text-emerald-800 text-sm">{completedCount}</span>
               </div>
 
-              <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 p-2.5 rounded-xl">
-                <Clock className="w-4 h-4 text-amber-600 shrink-0" />
-                <div>
-                  <span className="text-slate-500 block">ശേഷിക്കുന്നത്:</span>
-                  <span className="font-bold text-amber-800 text-sm">{pendingCount} എണ്ണം</span>
-                </div>
+              <div className="flex flex-col items-center text-center bg-rose-50 border border-rose-200 p-2 rounded-xl">
+                <UserX className="w-4 h-4 text-rose-600 mb-0.5" />
+                <span className="text-[10px] text-rose-600 block">മരണപ്പെട്ടവർ</span>
+                <span className="font-bold text-rose-800 text-sm">{deceasedCount}</span>
+              </div>
+
+              <div className="flex flex-col items-center text-center bg-amber-50 border border-amber-200 p-2 rounded-xl">
+                <Clock className="w-4 h-4 text-amber-600 mb-0.5" />
+                <span className="text-[10px] text-slate-500 block">ശേഷിക്കുന്നത്</span>
+                <span className="font-bold text-amber-800 text-sm">{pendingCount}</span>
               </div>
             </div>
           </div>

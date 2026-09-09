@@ -15,6 +15,7 @@ import Toast from './components/Toast';
 import { 
   fetchBeneficiaries, 
   updateBeneficiaryMobile, 
+  updateBeneficiaryStatus,
   updateBeneficiarySevanaStatus,
   addNewUser,
   getApiConfig, 
@@ -208,7 +209,7 @@ export default function App() {
         selectedWard === 'all' || b.ward === Number(selectedWard)
       );
       const remainingPending = currentWardItems.filter(
-        (b) => b.beneficiary_id !== beneficiaryId && (b.status === 'pending' || !b.mobile_no)
+        (b) => b.beneficiary_id !== beneficiaryId && b.status !== 'deceased' && (b.status === 'pending' || !b.mobile_no)
       ).length;
 
       if (remainingPending === 0 && currentWardItems.length > 0) {
@@ -227,6 +228,51 @@ export default function App() {
         type: 'error',
         title_ml: 'സേവ് ചെയ്യുന്നതിൽ തടസ്സം നേരിട്ടു',
         title_en: 'Failed to update mobile number',
+      });
+      loadData(false);
+      throw error;
+    }
+  };
+
+  // Update Beneficiary Status (e.g. Deceased or Revert to Pending)
+  const handleUpdateStatus = async (beneficiaryId, newStatus) => {
+    const now = new Date().toISOString();
+    const updatedByText = loggedInUser 
+      ? `${loggedInUser.name} (${loggedInUser.ward !== 'All' ? 'വാർഡ് ' + loggedInUser.ward : loggedInUser.role})`
+      : 'വാർഡ് മെമ്പർ';
+
+    // 1. Optimistic Update in State immediately
+    setBeneficiaries((prev) =>
+      prev.map((item) => {
+        if (item.beneficiary_id === beneficiaryId) {
+          return {
+            ...item,
+            status: newStatus,
+            updated_at: now,
+            updated_by: updatedByText,
+          };
+        }
+        return item;
+      })
+    );
+
+    // 2. Call API Service
+    try {
+      const result = await updateBeneficiaryStatus(beneficiaryId, newStatus, updatedByText);
+
+      showToast({
+        type: 'success',
+        title_ml: newStatus === 'deceased' ? 'മരണപ്പെട്ടതായി രേഖപ്പെടുത്തി!' : 'സ്റ്റാറ്റസ് മാറ്റി',
+        title_en: `Status updated to ${newStatus} for ${beneficiaryId}`,
+      });
+
+      return result;
+    } catch (error) {
+      console.error('Status update failed:', error);
+      showToast({
+        type: 'error',
+        title_ml: 'സ്റ്റാറ്റസ് മാറ്റുന്നതിൽ തടസ്സം നേരിട്ടു',
+        title_en: 'Failed to update status',
       });
       loadData(false);
       throw error;
@@ -321,10 +367,11 @@ export default function App() {
       : beneficiaries.filter((b) => b.ward === Number(selectedWard));
 
     const total = filtered.length;
-    const completed = filtered.filter((b) => b.status === 'completed' && b.mobile_no).length;
-    const pending = total - completed;
+    const deceased = filtered.filter((b) => b.status === 'deceased').length;
+    const completed = filtered.filter((b) => b.status === 'completed' && b.mobile_no && b.status !== 'deceased').length;
+    const pending = total - completed - deceased;
 
-    return { total, completed, pending };
+    return { total, completed, pending: pending >= 0 ? pending : 0, deceased };
   }, [beneficiaries, selectedWard]);
 
   // Pending Sevana Count across all completed beneficiaries
@@ -476,6 +523,7 @@ export default function App() {
                   total={wardStats.total}
                   completed={wardStats.completed}
                   pending={wardStats.pending}
+                  deceased={wardStats.deceased}
                 />
 
                 {/* Beneficiary List & Mobile Collection Workflow */}
@@ -483,6 +531,7 @@ export default function App() {
                   beneficiaries={beneficiaries}
                   selectedWard={selectedWard}
                   onSaveMobile={handleSaveMobile}
+                  onUpdateStatus={handleUpdateStatus}
                   isReadOnly={isViewer(loggedInUser)}
                 />
               </>

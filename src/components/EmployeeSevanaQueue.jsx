@@ -33,9 +33,9 @@ export default function EmployeeSevanaQueue({
   const [selectedIds, setSelectedIds] = useState([]);
   const [isUpdating, setIsUpdating] = useState(false);
 
-  // Filter beneficiaries who have a mobile number (status === 'completed' or mobile_no exists)
+  // Filter beneficiaries who have a valid mobile number and are not deceased
   const completedBeneficiaries = useMemo(() => {
-    return beneficiaries.filter((b) => b.mobile_no && b.mobile_no.trim().length === 10);
+    return beneficiaries.filter((b) => b.status !== 'deceased' && b.mobile_no && b.mobile_no.trim().length === 10);
   }, [beneficiaries]);
 
   // Tab counts

@@ -6,16 +6,18 @@ import {
   Clock, 
   CheckCircle2, 
   X, 
-  ListFilter
+  ListFilter,
+  UserX
 } from 'lucide-react';
 
 export default function BeneficiaryList({ 
   beneficiaries, 
   selectedWard, 
   onSaveMobile,
+  onUpdateStatus,
   isReadOnly = false
 }) {
-  const [activeTab, setActiveTab] = useState('pending'); // 'pending' | 'completed'
+  const [activeTab, setActiveTab] = useState('pending'); // 'pending' | 'completed' | 'deceased'
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedScheme, setSelectedScheme] = useState('all');
   const [pageSize, setPageSize] = useState(25); // Smooth chunking for ~2000 records
@@ -30,15 +32,24 @@ export default function BeneficiaryList({
 
   // Tab counts
   const pendingList = useMemo(() => {
-    return wardBeneficiaries.filter((b) => b.status === 'pending' || !b.mobile_no);
+    return wardBeneficiaries.filter((b) => b.status !== 'deceased' && (b.status === 'pending' || !b.mobile_no));
   }, [wardBeneficiaries]);
 
   const completedList = useMemo(() => {
-    return wardBeneficiaries.filter((b) => b.status === 'completed' && b.mobile_no);
+    return wardBeneficiaries.filter((b) => b.status !== 'deceased' && b.status === 'completed' && b.mobile_no);
+  }, [wardBeneficiaries]);
+
+  const deceasedList = useMemo(() => {
+    return wardBeneficiaries.filter((b) => b.status === 'deceased');
   }, [wardBeneficiaries]);
 
   // Active list based on tab
-  const activeList = activeTab === 'pending' ? pendingList : completedList;
+  const activeList = useMemo(() => {
+    if (activeTab === 'pending') return pendingList;
+    if (activeTab === 'completed') return completedList;
+    if (activeTab === 'deceased') return deceasedList;
+    return pendingList;
+  }, [activeTab, pendingList, completedList, deceasedList]);
 
   // Dynamic distinct schemes from Google Sheet 'Scheme Name' column
   const availableSchemes = useMemo(() => {
@@ -96,7 +107,7 @@ export default function BeneficiaryList({
 
   return (
     <div className="space-y-3 sm:space-y-4">
-      {/* Dual Tab Interface */}
+      {/* 3-Tab Interface */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200/90 p-1 flex gap-1 sticky top-[72px] sm:top-[76px] z-30 backdrop-blur-md bg-white/95">
         {/* Tab 1: Pending */}
         <button
@@ -105,15 +116,15 @@ export default function BeneficiaryList({
             setActiveTab('pending');
             setPageSize(25);
           }}
-          className={`flex-1 py-2.5 sm:py-3 px-2 sm:px-3 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-1 sm:gap-2 transition-all cursor-pointer ${
+          className={`flex-1 py-2 sm:py-2.5 px-1.5 sm:px-2 rounded-xl font-bold text-[11px] sm:text-xs md:text-sm flex items-center justify-center gap-1 sm:gap-1.5 transition-all cursor-pointer ${
             activeTab === 'pending'
               ? 'bg-amber-500 text-slate-950 shadow-sm font-black'
               : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
           }`}
         >
           <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
-          <span className="truncate">നമ്പർ ചേർക്കാനുള്ളവർ</span>
-          <span className={`px-1.5 sm:px-2 py-0.2 rounded-full text-[10px] sm:text-xs font-black shrink-0 ${
+          <span className="truncate">ചേർക്കാനുള്ളവർ</span>
+          <span className={`px-1.5 py-0.2 rounded-full text-[10px] sm:text-xs font-black shrink-0 ${
             activeTab === 'pending'
               ? 'bg-slate-950 text-amber-300'
               : 'bg-amber-100 text-amber-900'
@@ -129,7 +140,7 @@ export default function BeneficiaryList({
             setActiveTab('completed');
             setPageSize(25);
           }}
-          className={`flex-1 py-2.5 sm:py-3 px-2 sm:px-3 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 sm:gap-2 transition-all cursor-pointer ${
+          className={`flex-1 py-2 sm:py-2.5 px-1.5 sm:px-2 rounded-xl font-bold text-[11px] sm:text-xs md:text-sm flex items-center justify-center gap-1 sm:gap-1.5 transition-all cursor-pointer ${
             activeTab === 'completed'
               ? 'bg-emerald-700 text-white shadow-sm font-black'
               : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -137,12 +148,36 @@ export default function BeneficiaryList({
         >
           <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
           <span className="truncate">പൂർത്തിയായവർ</span>
-          <span className={`px-1.5 sm:px-2 py-0.2 rounded-full text-[11px] sm:text-xs font-black shrink-0 ${
+          <span className={`px-1.5 py-0.2 rounded-full text-[10px] sm:text-xs font-black shrink-0 ${
             activeTab === 'completed'
               ? 'bg-emerald-900 text-emerald-100'
               : 'bg-emerald-100 text-emerald-900'
           }`}>
             {completedList.length}
+          </span>
+        </button>
+
+        {/* Tab 3: Deceased */}
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab('deceased');
+            setPageSize(25);
+          }}
+          className={`flex-1 py-2 sm:py-2.5 px-1.5 sm:px-2 rounded-xl font-bold text-[11px] sm:text-xs md:text-sm flex items-center justify-center gap-1 sm:gap-1.5 transition-all cursor-pointer ${
+            activeTab === 'deceased'
+              ? 'bg-slate-800 text-white shadow-sm font-black'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+          }`}
+        >
+          <UserX className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 text-rose-400" />
+          <span className="truncate">മരണപ്പെട്ടവർ</span>
+          <span className={`px-1.5 py-0.2 rounded-full text-[10px] sm:text-xs font-black shrink-0 ${
+            activeTab === 'deceased'
+              ? 'bg-rose-500 text-white'
+              : 'bg-rose-100 text-rose-800'
+          }`}>
+            {deceasedList.length}
           </span>
         </button>
       </div>
@@ -223,6 +258,7 @@ export default function BeneficiaryList({
               beneficiary={beneficiary}
               activeTab={activeTab}
               onSaveMobile={onSaveMobile}
+              onUpdateStatus={onUpdateStatus}
               showWard={selectedWard === 'all'}
               isReadOnly={isReadOnly}
             />
@@ -245,17 +281,27 @@ export default function BeneficiaryList({
         /* Empty State */
         <div className="bg-white rounded-2xl border border-slate-200 p-8 sm:p-12 text-center">
           <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 mx-auto flex items-center justify-center mb-3">
-            {activeTab === 'pending' ? <CheckCircle2 className="w-7 h-7 text-emerald-600" /> : <Clock className="w-7 h-7 text-amber-500" />}
+            {activeTab === 'pending' ? (
+              <CheckCircle2 className="w-7 h-7 text-emerald-600" />
+            ) : activeTab === 'completed' ? (
+              <Clock className="w-7 h-7 text-amber-500" />
+            ) : (
+              <UserX className="w-7 h-7 text-rose-500" />
+            )}
           </div>
           <h3 className="text-base font-bold text-slate-800 mb-1">
             {activeTab === 'pending' 
               ? 'നമ്പർ ചേർക്കാനുള്ളവർ ആരുമില്ല!' 
-              : 'പൂർത്തിയായ രേഖകൾ കണ്ടെത്തിയില്ല'}
+              : activeTab === 'completed'
+              ? 'പൂർത്തിയായ രേഖകൾ കണ്ടെത്തിയില്ല'
+              : 'മരണപ്പെട്ട ഗുണഭോക്താക്കൾ ആരുമില്ല'}
           </h3>
           <p className="text-xs text-slate-500 max-w-sm mx-auto">
             {activeTab === 'pending'
               ? 'ഈ വാർഡിലെ എല്ലാ ഗുണഭോക്താക്കളുടെയും മൊബൈൽ നമ്പറുകൾ പൂർത്തിയായിരിക്കുന്നു.'
-              : 'മൊബൈൽ നമ്പറുകൾ രേഖപ്പെടുത്തി സേവ് ചെയ്യുമ്പോൾ അവ ഇവിടെ ദൃശ്യമാകും.'}
+              : activeTab === 'completed'
+              ? 'മൊബൈൽ നമ്പറുകൾ രേഖപ്പെടുത്തി സേവ് ചെയ്യുമ്പോൾ അവ ഇവിടെ ദൃശ്യമാകും.'
+              : 'മരണപ്പെട്ട ഗുണഭോക്താക്കളെ അടയാളപ്പെടുത്തുമ്പോൾ അവ ഇവിടെ ദൃശ്യമാകും.'}
           </p>
         </div>
       )}

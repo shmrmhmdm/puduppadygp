@@ -156,7 +156,11 @@ function doGet(e) {
         
         var mob = String(row[mobileCol] || '').trim();
         var st = String(row[statusCol] || '').trim().toLowerCase();
-        if (!st) st = mob.length === 10 ? 'completed' : 'pending';
+        if (st === 'മരണപ്പെട്ടു' || st === 'deceased' || st === 'death' || st === 'died') {
+          st = 'deceased';
+        } else if (!st) {
+          st = mob.length === 10 ? 'completed' : 'pending';
+        }
         var sevanaSt = String(row[sevanaStatusCol] || '').trim().toLowerCase();
         if (!sevanaSt) sevanaSt = 'pending';
         
@@ -277,10 +281,11 @@ function doPost(e) {
       return responseJSON({ success: true, count: updatedCount, message: "Sevana status updated" });
     }
     
-    // Member Update Mobile Number
+    // Member / Admin Update Status or Mobile Number
     var beneficiary_id = String(postData.beneficiary_id || '').trim();
     var mobile_no = String(postData.mobile_no || '').trim();
     var updated_by = String(postData.updated_by || '').trim();
+    var explicitStatus = postData.status ? String(postData.status).trim().toLowerCase() : '';
     
     var sheet = ss.getSheetByName("Beneficiaries") || ss.getSheets()[0];
     var data = sheet.getDataRange().getValues();
@@ -308,13 +313,18 @@ function doPost(e) {
     if (foundRow === -1) throw new Error("Beneficiary not found: " + beneficiary_id);
     
     var now = new Date().toISOString();
-    var newStatus = mobile_no.length === 10 ? 'completed' : 'pending';
-    sheet.getRange(foundRow, mobileCol + 1).setValue(mobile_no);
+    var newStatus = explicitStatus || (mobile_no.length === 10 ? 'completed' : 'pending');
+    
+    // If not explicitly deceased or status-only change with blank mobile, update mobile
+    if (postData.mobile_no !== undefined && explicitStatus !== 'deceased') {
+      sheet.getRange(foundRow, mobileCol + 1).setValue(mobile_no);
+    }
+    
     if (statusCol !== -1) sheet.getRange(foundRow, statusCol + 1).setValue(newStatus);
     if (updatedCol !== -1) sheet.getRange(foundRow, updatedCol + 1).setValue(now);
     if (updatedByCol !== -1 && updated_by) sheet.getRange(foundRow, updatedByCol + 1).setValue(updated_by);
     
-    return responseJSON({ success: true, message: "Updated successfully" });
+    return responseJSON({ success: true, message: "Updated successfully", status: newStatus });
   } catch (error) {
     return responseJSON({ success: false, error: error.toString() });
   }

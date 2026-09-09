@@ -17,7 +17,8 @@ import {
   Medal,
   Sparkles,
   Calendar,
-  Smartphone
+  Smartphone,
+  UserX
 } from 'lucide-react';
 
 export default function AnalyticsDashboard({ 
@@ -42,21 +43,24 @@ export default function AnalyticsDashboard({
   // Overall Statistics Calculations
   const stats = useMemo(() => {
     const total = filteredBeneficiaries.length;
+    const deceased = filteredBeneficiaries.filter((b) => b.status === 'deceased').length;
     const completedMobile = filteredBeneficiaries.filter(
-      (b) => b.status === 'completed' && b.mobile_no
+      (b) => b.status === 'completed' && b.mobile_no && b.status !== 'deceased'
     ).length;
-    const pendingMobile = total - completedMobile;
-    const mobilePercentage = total > 0 ? Math.round((completedMobile / total) * 100) : 0;
+    const pendingMobile = total - completedMobile - deceased >= 0 ? total - completedMobile - deceased : 0;
+    const targetTotal = total - deceased > 0 ? total - deceased : 0;
+    const mobilePercentage = targetTotal > 0 ? Math.round((completedMobile / targetTotal) * 100) : (total > 0 && deceased === total ? 100 : 0);
 
     const sevanaSynced = filteredBeneficiaries.filter(
-      (b) => b.sevana_status === 'synced'
+      (b) => b.sevana_status === 'synced' && b.status !== 'deceased'
     ).length;
     const sevanaPending = completedMobile - sevanaSynced >= 0 ? completedMobile - sevanaSynced : 0;
     const sevanaPercentage = completedMobile > 0 ? Math.round((sevanaSynced / completedMobile) * 100) : 0;
-    const sevanaTotalPercentage = total > 0 ? Math.round((sevanaSynced / total) * 100) : 0;
+    const sevanaTotalPercentage = targetTotal > 0 ? Math.round((sevanaSynced / targetTotal) * 100) : 0;
 
     return {
       total,
+      deceased,
       completedMobile,
       pendingMobile,
       mobilePercentage,
@@ -147,11 +151,13 @@ export default function AnalyticsDashboard({
     for (let w = 1; w <= totalWards; w++) {
       const wardItems = beneficiaries.filter((b) => b.ward === w);
       const total = wardItems.length;
-      const completed = wardItems.filter((b) => b.status === 'completed' && b.mobile_no).length;
-      const pending = total - completed;
-      const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
-      const sevanaSynced = wardItems.filter((b) => b.sevana_status === 'synced').length;
-      const sevanaPercent = total > 0 ? Math.round((sevanaSynced / total) * 100) : 0;
+      const deceased = wardItems.filter((b) => b.status === 'deceased').length;
+      const completed = wardItems.filter((b) => b.status === 'completed' && b.mobile_no && b.status !== 'deceased').length;
+      const pending = total - completed - deceased >= 0 ? total - completed - deceased : 0;
+      const targetTotal = total - deceased > 0 ? total - deceased : 0;
+      const percent = targetTotal > 0 ? Math.round((completed / targetTotal) * 100) : (total > 0 && deceased === total ? 100 : 0);
+      const sevanaSynced = wardItems.filter((b) => b.sevana_status === 'synced' && b.status !== 'deceased').length;
+      const sevanaPercent = targetTotal > 0 ? Math.round((sevanaSynced / targetTotal) * 100) : 0;
 
       // Find assigned ward member
       const member = users.find(
@@ -162,6 +168,7 @@ export default function AnalyticsDashboard({
         ward: w,
         total,
         completed,
+        deceased,
         pending,
         percent,
         sevanaSynced,
@@ -185,28 +192,34 @@ export default function AnalyticsDashboard({
         code: b.scheme_code || '',
         total: 0,
         completed: 0,
+        deceased: 0,
         pending: 0,
         sevanaSynced: 0
       };
 
       current.total += 1;
-      if (b.status === 'completed' && b.mobile_no) {
+      if (b.status === 'deceased') {
+        current.deceased += 1;
+      } else if (b.status === 'completed' && b.mobile_no) {
         current.completed += 1;
       } else {
         current.pending += 1;
       }
-      if (b.sevana_status === 'synced') {
+      if (b.sevana_status === 'synced' && b.status !== 'deceased') {
         current.sevanaSynced += 1;
       }
 
       schemeMap.set(schemeName, current);
     });
 
-    return Array.from(schemeMap.values()).map((s) => ({
-      ...s,
-      percent: s.total > 0 ? Math.round((s.completed / s.total) * 100) : 0,
-      sevanaPercent: s.total > 0 ? Math.round((s.sevanaSynced / s.total) * 100) : 0
-    }));
+    return Array.from(schemeMap.values()).map((s) => {
+      const target = s.total - s.deceased > 0 ? s.total - s.deceased : 0;
+      return {
+        ...s,
+        percent: target > 0 ? Math.round((s.completed / target) * 100) : (s.total > 0 && s.deceased === s.total ? 100 : 0),
+        sevanaPercent: target > 0 ? Math.round((s.sevanaSynced / target) * 100) : 0
+      };
+    });
   }, [filteredBeneficiaries]);
 
   // 4. Read-only Search for beneficiaries
@@ -290,41 +303,41 @@ export default function AnalyticsDashboard({
         </div>
       </div>
 
-      {/* 4 Main Summary Metric Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      {/* 5 Main Summary Metric Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-3.5">
         {/* Card 1: Total Beneficiaries */}
-        <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-sm relative overflow-hidden">
+        <div className="bg-white rounded-2xl p-3.5 sm:p-4 border border-slate-200 shadow-sm relative overflow-hidden">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] sm:text-xs font-bold text-slate-600">ആകെ പെൻഷൻകാർ</span>
-            <div className="w-8 h-8 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center">
-              <Users className="w-4 h-4" />
+            <span className="text-[10px] sm:text-xs font-bold text-slate-600 truncate">ആകെ പെൻഷൻകാർ</span>
+            <div className="w-7 h-7 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center shrink-0">
+              <Users className="w-3.5 h-3.5" />
             </div>
           </div>
-          <div className="text-2xl sm:text-3xl font-black text-slate-900 mt-2 tracking-tight">
+          <div className="text-xl sm:text-2xl font-black text-slate-900 mt-1.5 tracking-tight">
             {stats.total.toLocaleString()}
           </div>
-          <div className="text-[10px] sm:text-[11px] font-semibold text-slate-500 mt-1">
-            {selectedWardFilter === 'all' ? '25 വാർഡുകളിൽ ആകെ' : `വാർഡ് ${selectedWardFilter}-ൽ മാത്രം`}
+          <div className="text-[9px] sm:text-[10px] font-semibold text-slate-500 mt-0.5 truncate">
+            {selectedWardFilter === 'all' ? '25 വാർഡുകളിൽ ആകെ' : `വാർഡ് ${selectedWardFilter}-ൽ`}
           </div>
         </div>
 
         {/* Card 2: Mobile Collection Completed */}
-        <div className="bg-emerald-50/80 rounded-2xl p-4 sm:p-5 border border-emerald-200/90 shadow-sm relative overflow-hidden">
+        <div className="bg-emerald-50/80 rounded-2xl p-3.5 sm:p-4 border border-emerald-200/90 shadow-sm relative overflow-hidden">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] sm:text-xs font-bold text-emerald-900">മൊബൈൽ ശേഖരിച്ചത്</span>
-            <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-xs">
-              <CheckCircle2 className="w-4 h-4" />
+            <span className="text-[10px] sm:text-xs font-bold text-emerald-900 truncate">മൊബൈൽ ശേഖരിച്ചത്</span>
+            <div className="w-7 h-7 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+              <CheckCircle2 className="w-3.5 h-3.5" />
             </div>
           </div>
-          <div className="flex items-baseline gap-2 mt-2">
-            <span className="text-2xl sm:text-3xl font-black text-emerald-800 tracking-tight">
+          <div className="flex items-baseline gap-1.5 mt-1.5">
+            <span className="text-xl sm:text-2xl font-black text-emerald-800 tracking-tight">
               {stats.completedMobile.toLocaleString()}
             </span>
-            <span className="text-xs sm:text-sm font-extrabold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full border border-emerald-300">
+            <span className="text-[10px] sm:text-xs font-extrabold text-emerald-700 bg-emerald-100 px-1.5 py-0.2 rounded-full border border-emerald-300">
               {stats.mobilePercentage}%
             </span>
           </div>
-          <div className="w-full bg-emerald-200/70 rounded-full h-1.5 mt-2 overflow-hidden">
+          <div className="w-full bg-emerald-200/70 rounded-full h-1.5 mt-1.5 overflow-hidden">
             <div
               className="bg-emerald-600 h-full rounded-full transition-all duration-500"
               style={{ width: `${stats.mobilePercentage}%` }}
@@ -332,44 +345,57 @@ export default function AnalyticsDashboard({
           </div>
         </div>
 
-        {/* Card 3: Mobile Collection Pending */}
-        <div className="bg-amber-50/80 rounded-2xl p-4 sm:p-5 border border-amber-200/90 shadow-sm relative overflow-hidden">
+        {/* Card 3: Deceased */}
+        <div className="bg-rose-50/80 rounded-2xl p-3.5 sm:p-4 border border-rose-200/90 shadow-sm relative overflow-hidden">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] sm:text-xs font-bold text-amber-950">ശേഖരിക്കാൻ ബാക്കി</span>
-            <div className="w-8 h-8 rounded-xl bg-amber-600 text-white flex items-center justify-center shadow-xs">
-              <Clock className="w-4 h-4" />
+            <span className="text-[10px] sm:text-xs font-bold text-rose-950 truncate">മരണപ്പെട്ടവർ</span>
+            <div className="w-7 h-7 rounded-xl bg-rose-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+              <UserX className="w-3.5 h-3.5" />
             </div>
           </div>
-          <div className="flex items-baseline gap-2 mt-2">
-            <span className="text-2xl sm:text-3xl font-black text-amber-900 tracking-tight">
+          <div className="text-xl sm:text-2xl font-black text-rose-900 mt-1.5 tracking-tight">
+            {stats.deceased.toLocaleString()}
+          </div>
+          <div className="text-[9px] sm:text-[10px] font-semibold text-rose-700 mt-0.5">
+            നമ്പർ ആവശ്യമില്ലാത്തവർ
+          </div>
+        </div>
+
+        {/* Card 4: Mobile Collection Pending */}
+        <div className="bg-amber-50/80 rounded-2xl p-3.5 sm:p-4 border border-amber-200/90 shadow-sm relative overflow-hidden">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] sm:text-xs font-bold text-amber-950 truncate">ശേഖരിക്കാൻ ബാക്കി</span>
+            <div className="w-7 h-7 rounded-xl bg-amber-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+              <Clock className="w-3.5 h-3.5" />
+            </div>
+          </div>
+          <div className="flex items-baseline gap-1.5 mt-1.5">
+            <span className="text-xl sm:text-2xl font-black text-amber-900 tracking-tight">
               {stats.pendingMobile.toLocaleString()}
             </span>
-            <span className="text-xs sm:text-sm font-extrabold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-300">
-              {100 - stats.mobilePercentage}%
-            </span>
           </div>
-          <div className="text-[10px] sm:text-[11px] font-semibold text-amber-800 mt-1">
+          <div className="text-[9px] sm:text-[10px] font-semibold text-amber-800 mt-0.5 truncate">
             നമ്പർ ലഭ്യമാക്കാനുള്ളവർ
           </div>
         </div>
 
-        {/* Card 4: Sevana Synced */}
-        <div className="bg-indigo-50/80 rounded-2xl p-4 sm:p-5 border border-indigo-200/90 shadow-sm relative overflow-hidden">
+        {/* Card 5: Sevana Synced */}
+        <div className="bg-indigo-50/80 rounded-2xl p-3.5 sm:p-4 border border-indigo-200/90 shadow-sm relative overflow-hidden col-span-2 sm:col-span-1">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] sm:text-xs font-bold text-indigo-950">സേവനയിൽ സിങ്ക് ചെയ്തത്</span>
-            <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-xs">
-              <FileCheck className="w-4 h-4" />
+            <span className="text-[10px] sm:text-xs font-bold text-indigo-950 truncate">സേവനയിൽ സിങ്ക്</span>
+            <div className="w-7 h-7 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+              <FileCheck className="w-3.5 h-3.5" />
             </div>
           </div>
-          <div className="flex items-baseline gap-2 mt-2">
-            <span className="text-2xl sm:text-3xl font-black text-indigo-900 tracking-tight">
+          <div className="flex items-baseline gap-1.5 mt-1.5">
+            <span className="text-xl sm:text-2xl font-black text-indigo-900 tracking-tight">
               {stats.sevanaSynced.toLocaleString()}
             </span>
-            <span className="text-xs sm:text-sm font-extrabold text-indigo-800 bg-indigo-100 px-2 py-0.5 rounded-full border border-indigo-300">
+            <span className="text-[10px] sm:text-xs font-extrabold text-indigo-800 bg-indigo-100 px-1.5 py-0.2 rounded-full border border-indigo-300">
               {stats.sevanaTotalPercentage}%
             </span>
           </div>
-          <div className="w-full bg-indigo-200/70 rounded-full h-1.5 mt-2 overflow-hidden">
+          <div className="w-full bg-indigo-200/70 rounded-full h-1.5 mt-1.5 overflow-hidden">
             <div
               className="bg-indigo-600 h-full rounded-full transition-all duration-500"
               style={{ width: `${stats.sevanaTotalPercentage}%` }}
@@ -673,6 +699,7 @@ export default function AnalyticsDashboard({
                   <th className="p-3 sm:p-3.5">മെമ്പർ</th>
                   <th className="p-3 sm:p-3.5 text-center">ആകെ</th>
                   <th className="p-3 sm:p-3.5 text-center">ചെയ്തവ (Done)</th>
+                  <th className="p-3 sm:p-3.5 text-center">മരണപ്പെട്ടവർ</th>
                   <th className="p-3 sm:p-3.5 text-center">ബാക്കി (Pending)</th>
                   <th className="p-3 sm:p-3.5 min-w-[140px]">ശേഖരണ ശതമാനം</th>
                   <th className="p-3 sm:p-3.5 text-center">സേവന സിങ്ക്</th>
@@ -710,6 +737,10 @@ export default function AnalyticsDashboard({
 
                       <td className="p-3 sm:p-3.5 text-center font-bold text-emerald-700 text-sm">
                         {w.completed}
+                      </td>
+
+                      <td className="p-3 sm:p-3.5 text-center font-bold text-rose-700 text-sm">
+                        {w.deceased}
                       </td>
 
                       <td className="p-3 sm:p-3.5 text-center font-bold text-amber-700 text-sm">
@@ -789,18 +820,22 @@ export default function AnalyticsDashboard({
                   </span>
                 </div>
 
-                <div className="grid grid-cols-3 gap-2 text-center text-xs">
-                  <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-2">
-                    <span className="text-[10px] text-emerald-800 font-bold block">ചെയ്തവ</span>
-                    <span className="text-base font-extrabold text-emerald-900">{scheme.completed}</span>
+                <div className="grid grid-cols-4 gap-1.5 sm:gap-2 text-center text-xs">
+                  <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-1.5 sm:p-2">
+                    <span className="text-[10px] text-emerald-800 font-bold block truncate">ചെയ്തവ</span>
+                    <span className="text-sm sm:text-base font-extrabold text-emerald-900">{scheme.completed}</span>
                   </div>
-                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-2">
-                    <span className="text-[10px] text-amber-800 font-bold block">ബാക്കി</span>
-                    <span className="text-base font-extrabold text-amber-900">{scheme.pending}</span>
+                  <div className="bg-rose-50 border border-rose-200 rounded-xl p-1.5 sm:p-2">
+                    <span className="text-[10px] text-rose-800 font-bold block truncate">മരണപ്പെട്ടവർ</span>
+                    <span className="text-sm sm:text-base font-extrabold text-rose-900">{scheme.deceased}</span>
                   </div>
-                  <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-2">
-                    <span className="text-[10px] text-indigo-800 font-bold block">സേവന സിങ്ക്</span>
-                    <span className="text-base font-extrabold text-indigo-900">{scheme.sevanaSynced}</span>
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-1.5 sm:p-2">
+                    <span className="text-[10px] text-amber-800 font-bold block truncate">ബാക്കി</span>
+                    <span className="text-sm sm:text-base font-extrabold text-amber-900">{scheme.pending}</span>
+                  </div>
+                  <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-1.5 sm:p-2">
+                    <span className="text-[10px] text-indigo-800 font-bold block truncate">സേവന സിങ്ക്</span>
+                    <span className="text-sm sm:text-base font-extrabold text-indigo-900">{scheme.sevanaSynced}</span>
                   </div>
                 </div>
 
@@ -855,14 +890,17 @@ export default function AnalyticsDashboard({
               {searchedBeneficiaries.length > 0 ? (
                 <div className="divide-y divide-slate-100 border border-slate-200 rounded-2xl overflow-hidden">
                   {searchedBeneficiaries.map((b) => {
-                    const isDone = b.status === 'completed' && b.mobile_no;
+                    const isDeceased = b.status === 'deceased';
+                    const isDone = b.status === 'completed' && b.mobile_no && !isDeceased;
                     const isSynced = b.sevana_status === 'synced';
 
                     return (
                       <div key={b.beneficiary_id} className="p-3.5 bg-white hover:bg-slate-50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                         <div>
                           <div className="flex items-center gap-2">
-                            <span className="font-bold text-sm text-slate-900">{b.name_ml || b.name_en}</span>
+                            <span className={`font-bold text-sm ${isDeceased ? 'text-slate-600 line-through' : 'text-slate-900'}`}>
+                              {b.name_ml || b.name_en}
+                            </span>
                             <span className="text-[10px] font-bold px-2 py-0.2 rounded-full bg-slate-100 text-slate-700">
                               വാർഡ് {b.ward}
                             </span>
@@ -873,13 +911,18 @@ export default function AnalyticsDashboard({
                           {b.updated_by && (
                             <div className="text-[11px] text-emerald-800 font-semibold mt-0.5 flex items-center gap-1">
                               <UserCheck className="w-3 h-3 text-emerald-600" />
-                              <span>അപ്ഡേറ്റ് ചെയ്തത്: <strong>{b.updated_by}</strong></span>
+                              <span>{isDeceased ? 'രേഖപ്പെടുത്തിയത്' : 'അപ്ഡേറ്റ് ചെയ്തത്'}: <strong>{b.updated_by}</strong></span>
                             </div>
                           )}
                         </div>
 
                         <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
-                          {isDone ? (
+                          {isDeceased ? (
+                            <span className="px-2.5 py-1 rounded-xl text-xs font-bold bg-rose-100 text-rose-800 border border-rose-300 flex items-center gap-1">
+                              <UserX className="w-3.5 h-3.5 text-rose-600" />
+                              <span>മരണപ്പെട്ടു</span>
+                            </span>
+                          ) : isDone ? (
                             <span className="px-2.5 py-1 rounded-xl text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1 font-mono">
                               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                               <span>+91 {b.mobile_no}</span>

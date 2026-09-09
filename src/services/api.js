@@ -327,11 +327,78 @@ export const updateBeneficiaryMobile = async (beneficiary_id, mobile_no, updated
     }
   }
 
+};
+
+/**
+ * Update beneficiary status (e.g. 'deceased', 'pending', 'completed')
+ */
+export const updateBeneficiaryStatus = async (beneficiary_id, status = 'deceased', updated_by = '') => {
+  const config = getApiConfig();
+  const now = new Date().toISOString();
+
+  // 1. Update in Local Storage Cache immediately
+  const currentData = getCachedBeneficiaries() || [];
+  const updatedData = currentData.map((item) => {
+    if (item.beneficiary_id === beneficiary_id) {
+      return {
+        ...item,
+        status: status,
+        updated_at: now,
+        updated_by: updated_by || item.updated_by || '',
+      };
+    }
+    return item;
+  });
+  setCachedBeneficiaries(updatedData);
+
+  // 2. Sync with Google Apps Script
+  if (config.scriptUrl) {
+    try {
+      const payload = {
+        action: 'updateStatus',
+        beneficiary_id,
+        status,
+        updated_at: now,
+        updated_by,
+      };
+
+      const response = await fetch(config.scriptUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'text/plain;charset=utf-8',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const result = await response.json();
+      return {
+        success: true,
+        beneficiary_id,
+        status,
+        updated_at: now,
+        updated_by,
+        synced: true,
+        apiResult: result,
+      };
+    } catch (err) {
+      console.warn('Status update network sync failed, queued offline:', err);
+      queueOfflineUpdate({ beneficiary_id, status, updated_at: now, updated_by });
+      return {
+        success: true,
+        beneficiary_id,
+        status,
+        updated_at: now,
+        updated_by,
+        synced: false,
+        offline: true,
+      };
+    }
+  }
+
   return {
     success: true,
     beneficiary_id,
-    mobile_no: cleanMobile,
-    status: newStatus,
+    status,
     updated_at: now,
     updated_by,
     synced: false,

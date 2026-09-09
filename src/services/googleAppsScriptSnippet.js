@@ -51,7 +51,7 @@ function setupSheetHeaders() {
   sheet1.getRange("J:J").setNumberFormat("@");
   
   // -------------------------------------------------------------
-  // 2. Users Sheet Setup (Admin, Employee, Ward Members)
+  // 2. Users Sheet Setup (Admin, Employee, Ward Members, Viewer)
   // -------------------------------------------------------------
   var sheet2 = ss.getSheetByName("Users") || ss.getSheetByName("WardMembers");
   if (!sheet2) {
@@ -64,7 +64,7 @@ function setupSheetHeaders() {
     "Ward",                // Col A (1) - വാർഡ് നമ്പർ (All / 1-25)
     "User Name",           // Col B (2) - പേര്
     "Mobile Number",       // Col C (3) - ലോഗിൻ 10 അക്ക നമ്പർ
-    "Role",                // Col D (4) - Admin / Employee / Ward Member
+    "Role",                // Col D (4) - Admin / Employee / Ward Member / Viewer
     "Status",              // Col E (5) - Active / Inactive
     "Created At"           // Col F (6) - തീയതി
   ];
@@ -79,7 +79,7 @@ function setupSheetHeaders() {
   SpreadsheetApp.flush();
   
   try {
-    SpreadsheetApp.getUi().alert("വിജയകരം!", "രണ്ട് ഷീറ്റുകളും (Beneficiaries, Users) കോളങ്ങളും സജ്ജമാക്കി കഴിഞ്ഞു. 'Users' ഷീറ്റിൽ അഡ്മിൻ, ജീവനക്കാർ, വാർഡ് മെമ്പർമാർ എന്നിവരുടെ യഥാർത്ഥ മൊബൈൽ നമ്പറുകൾ നൽകാം.", SpreadsheetApp.getUi().ButtonSet.OK);
+    SpreadsheetApp.getUi().alert("വിജയകരം!", "രണ്ട് ഷീറ്റുകളും (Beneficiaries, Users) കോളങ്ങളും സജ്ജമാക്കി കഴിഞ്ഞു. 'Users' ഷീറ്റിൽ അഡ്മിൻ, ജീവനക്കാർ, വാർഡ് മെമ്പർമാർ, നിരീക്ഷകൻ (Viewer) എന്നിവരുടെ മൊബൈൽ നമ്പറുകൾ നൽകാം.", SpreadsheetApp.getUi().ButtonSet.OK);
   } catch(e) {}
   
   return { success: true, message: "Both sheets configured successfully" };

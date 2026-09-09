@@ -12,7 +12,8 @@ import {
 export default function BeneficiaryList({ 
   beneficiaries, 
   selectedWard, 
-  onSaveMobile 
+  onSaveMobile,
+  isReadOnly = false
 }) {
   const [activeTab, setActiveTab] = useState('pending'); // 'pending' | 'completed'
   const [searchQuery, setSearchQuery] = useState('');
@@ -211,6 +212,11 @@ export default function BeneficiaryList({
       {/* Beneficiary Cards List */}
       {visibleList.length > 0 ? (
         <div className="space-y-3">
+          {isReadOnly && (
+            <div className="bg-cyan-50 border border-cyan-200 text-cyan-900 px-4 py-2 rounded-xl text-xs font-bold flex items-center justify-between">
+              <span>👀 നിരീക്ഷകൻ (Viewer) മോഡ്: വിവരങ്ങൾ പരിശോധിക്കാൻ മാത്രമുള്ള അനുമതി (Read Only).</span>
+            </div>
+          )}
           {visibleList.map((beneficiary) => (
             <BeneficiaryCard
               key={beneficiary.beneficiary_id}
@@ -218,6 +224,7 @@ export default function BeneficiaryList({
               activeTab={activeTab}
               onSaveMobile={onSaveMobile}
               showWard={selectedWard === 'all'}
+              isReadOnly={isReadOnly}
             />
           ))}
 

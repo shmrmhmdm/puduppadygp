@@ -31,3 +31,55 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
+
+/* Animated Gradient Border for Login Card */
+@keyframes spinBorder {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.animated-gradient-border-wrapper {
+  position: relative;
+  border-radius: 1.5rem;
+  padding: 3px;
+  overflow: hidden;
+  box-shadow: 0 15px 35px -5px rgba(16, 185, 129, 0.2), 0 8px 16px -6px rgba(15, 23, 42, 0.08);
+  transition: all 0.3s ease;
+}
+
+.animated-gradient-border-wrapper:hover {
+  box-shadow: 0 20px 40px -5px rgba(16, 185, 129, 0.3), 0 10px 20px -5px rgba(59, 130, 246, 0.15);
+}
+
+.animated-gradient-border-wrapper::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: conic-gradient(
+    from 0deg,
+    #059669 0deg,
+    #10b981 60deg,
+    #06b6d4 120deg,
+    #3b82f6 180deg,
+    #8b5cf6 240deg,
+    #10b981 300deg,
+    #059669 360deg
+  );
+  animation: spinBorder 5s linear infinite;
+  z-index: 0;
+}
+
+.animated-gradient-border-wrapper > .card-inner {
+  position: relative;
+  z-index: 1;
+  background-color: #ffffff;
+  border-radius: calc(1.5rem - 3px);
+}
+

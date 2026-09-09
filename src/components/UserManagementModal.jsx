@@ -176,6 +176,7 @@ export default function UserManagementModal({
                     <option value="Ward Member">വാർഡ് മെമ്പർ (Ward Member)</option>
                     <option value="Employee">ജീവനക്കാരൻ / ക്ലർക്ക് (Employee)</option>
                     <option value="Admin">അഡ്മിൻ (Admin)</option>
+                    <option value="Viewer">നിരീക്ഷകൻ / സ്റ്റാറ്റ്സ് മാത്രം (Viewer / Stats)</option>
                   </select>
                 </div>
 
@@ -186,7 +187,7 @@ export default function UserManagementModal({
                   <select
                     value={ward}
                     onChange={(e) => setWard(e.target.value)}
-                    disabled={role === 'Admin' || role === 'Employee'}
+                    disabled={role === 'Admin' || role === 'Employee' || role === 'Viewer'}
                     className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs sm:text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-slate-100 disabled:text-slate-400"
                   >
                     <option value="All">എല്ലാ വാർഡുകളും (All)</option>
@@ -229,6 +230,7 @@ export default function UserManagementModal({
               filteredUsers.map((u, idx) => {
                 const isUserAdmin = u.role === 'Admin';
                 const isUserEmployee = u.role === 'Employee';
+                const isUserViewer = u.role === 'Viewer' || u.role === 'നിരീക്ഷകൻ' || u.role === 'Monitor';
 
                 return (
                   <div
@@ -241,9 +243,19 @@ export default function UserManagementModal({
                           ? 'bg-purple-600 shadow-sm' 
                           : isUserEmployee 
                           ? 'bg-indigo-600 shadow-sm' 
+                          : isUserViewer
+                          ? 'bg-cyan-600 shadow-sm'
                           : 'bg-emerald-600 shadow-sm'
                       }`}>
-                        {isUserAdmin ? <Shield className="w-4 h-4" /> : isUserEmployee ? <Briefcase className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
+                        {isUserAdmin ? (
+                          <Shield className="w-4 h-4" />
+                        ) : isUserEmployee ? (
+                          <Briefcase className="w-4 h-4" />
+                        ) : isUserViewer ? (
+                          <Users className="w-4 h-4" />
+                        ) : (
+                          <UserCheck className="w-4 h-4" />
+                        )}
                       </div>
 
                       <div>
@@ -254,9 +266,17 @@ export default function UserManagementModal({
                               ? 'bg-purple-100 text-purple-800' 
                               : isUserEmployee 
                               ? 'bg-indigo-100 text-indigo-800' 
+                              : isUserViewer
+                              ? 'bg-cyan-100 text-cyan-800'
                               : 'bg-emerald-100 text-emerald-800'
                           }`}>
-                            {u.role === 'Admin' ? 'അഡ്മിൻ' : u.role === 'Employee' ? 'ജീവനക്കാരൻ' : 'വാർഡ് മെമ്പർ'}
+                            {isUserAdmin 
+                              ? 'അഡ്മിൻ' 
+                              : isUserEmployee 
+                              ? 'ജീവനക്കാരൻ' 
+                              : isUserViewer
+                              ? 'നിരീക്ഷകൻ (Viewer)'
+                              : 'വാർഡ് മെമ്പർ'}
                           </span>
                         </div>
                         <div className="flex items-center gap-3 text-xs text-slate-500 mt-0.5">

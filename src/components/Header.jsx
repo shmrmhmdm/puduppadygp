@@ -13,9 +13,10 @@ import {
   Briefcase,
   Users,
   FileCheck,
-  Smartphone
+  Smartphone,
+  BarChart3
 } from 'lucide-react';
-import { isAdmin, isEmployee } from '../services/api';
+import { isAdmin, isEmployee, isViewer } from '../services/api';
 
 export default function Header({ 
   hasScriptUrl,
@@ -34,6 +35,7 @@ export default function Header({
 }) {
   const userIsAdmin = isAdmin(loggedInUser);
   const userIsEmployee = isEmployee(loggedInUser);
+  const userIsViewer = isViewer(loggedInUser);
 
   return (
     <header className="bg-slate-800 text-white shadow-md border-b border-slate-700/60 sticky top-0 z-40">
@@ -79,21 +81,68 @@ export default function Header({
                 പുതുപ്പാടി പഞ്ചായത്ത്
               </h1>
               <p className="text-[10px] sm:text-xs font-semibold text-emerald-300 truncate">
-                പെൻഷൻ മൊബൈൽ പോർട്ടൽ
+                {userIsViewer ? 'പെൻഷൻ നിരീക്ഷണ പോർട്ടൽ' : 'പെൻഷൻ മൊബൈൽ പോർട്ടൽ'}
               </p>
             </div>
           </div>
 
           {/* Quick Action Icons */}
           <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
-            {/* View Switcher for Employee & Admin */}
-            {userIsEmployee && (
+            {/* View Switcher for Viewer */}
+            {userIsViewer && (
               <div className="flex items-center bg-slate-900/90 p-0.5 rounded-xl border border-slate-700">
+                <button
+                  type="button"
+                  onClick={() => onSwitchView('stats')}
+                  title="സ്റ്റാറ്റിസ്റ്റിക്സ് ഡാഷ്‌ബോർഡ്"
+                  className={`p-1.5 sm:px-2.5 sm:py-1 rounded-lg text-xs font-bold flex items-center gap-1 transition-all ${
+                    currentView === 'stats'
+                      ? 'bg-cyan-700 text-white shadow-xs'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <BarChart3 className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">സ്റ്റാറ്റ്സ്</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => onSwitchView('collection')}
+                  title="ഗുണഭോക്താക്കളുടെ പട്ടിക (View Only)"
+                  className={`p-1.5 sm:px-2.5 sm:py-1 rounded-lg text-xs font-bold flex items-center gap-1 transition-all ${
+                    currentView === 'collection'
+                      ? 'bg-emerald-700 text-white shadow-xs'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <Smartphone className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">ലിസ്റ്റ്</span>
+                </button>
+              </div>
+            )}
+
+            {/* View Switcher for Employee & Admin */}
+            {(userIsEmployee || userIsAdmin) && (
+              <div className="flex items-center bg-slate-900/90 p-0.5 rounded-xl border border-slate-700">
+                <button
+                  type="button"
+                  onClick={() => onSwitchView('stats')}
+                  title="സ്റ്റാറ്റിസ്റ്റിക്സ് ഡാഷ്‌ബോർഡ്"
+                  className={`p-1.5 sm:px-2 sm:py-1 rounded-lg text-xs font-bold flex items-center gap-1 transition-all ${
+                    currentView === 'stats'
+                      ? 'bg-cyan-700 text-white shadow-xs'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <BarChart3 className="w-3.5 h-3.5" />
+                  <span className="hidden md:inline">സ്റ്റാറ്റ്സ്</span>
+                </button>
+
                 <button
                   type="button"
                   onClick={() => onSwitchView('collection')}
                   title="മൊബൈൽ നമ്പർ കളക്ഷൻ"
-                  className={`p-1.5 sm:px-2.5 sm:py-1 rounded-lg text-xs font-bold flex items-center gap-1 transition-all ${
+                  className={`p-1.5 sm:px-2 sm:py-1 rounded-lg text-xs font-bold flex items-center gap-1 transition-all ${
                     currentView === 'collection'
                       ? 'bg-emerald-700 text-white shadow-xs'
                       : 'text-slate-400 hover:text-white'
@@ -103,24 +152,26 @@ export default function Header({
                   <span className="hidden md:inline">കളക്ഷൻ</span>
                 </button>
 
-                <button
-                  type="button"
-                  onClick={() => onSwitchView('sevana')}
-                  title="സേവന അപ്ഡേഷൻ ക്യൂ"
-                  className={`p-1.5 sm:px-2.5 sm:py-1 rounded-lg text-xs font-bold flex items-center gap-1 transition-all ${
-                    currentView === 'sevana'
-                      ? 'bg-indigo-700 text-white shadow-xs'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  <FileCheck className="w-3.5 h-3.5 text-indigo-200" />
-                  <span className="hidden md:inline">സേവന</span>
-                  {pendingSevanaCount > 0 && (
-                    <span className="px-1.5 py-0.2 rounded-full text-[9px] bg-amber-400 text-slate-950 font-black">
-                      {pendingSevanaCount}
-                    </span>
-                  )}
-                </button>
+                {userIsEmployee && (
+                  <button
+                    type="button"
+                    onClick={() => onSwitchView('sevana')}
+                    title="സേവന അപ്ഡേഷൻ ക്യൂ"
+                    className={`p-1.5 sm:px-2 sm:py-1 rounded-lg text-xs font-bold flex items-center gap-1 transition-all ${
+                      currentView === 'sevana'
+                        ? 'bg-indigo-700 text-white shadow-xs'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <FileCheck className="w-3.5 h-3.5 text-indigo-200" />
+                    <span className="hidden md:inline">സേവന</span>
+                    {pendingSevanaCount > 0 && (
+                      <span className="px-1.5 py-0.2 rounded-full text-[9px] bg-amber-400 text-slate-950 font-black">
+                        {pendingSevanaCount}
+                      </span>
+                    )}
+                  </button>
+                )}
               </div>
             )}
 
@@ -191,9 +242,17 @@ export default function Header({
                   ? 'bg-purple-900/80 text-purple-200 border-purple-500/40' 
                   : userIsEmployee 
                   ? 'bg-indigo-900/80 text-indigo-200 border-indigo-500/40' 
+                  : userIsViewer
+                  ? 'bg-cyan-900/80 text-cyan-200 border-cyan-500/40'
                   : 'bg-emerald-900/80 text-emerald-200 border-emerald-500/40'
               }`}>
-                {userIsAdmin ? 'അഡ്മിൻ' : userIsEmployee ? 'ജീവനക്കാരൻ' : 'മെമ്പർ'}
+                {userIsAdmin 
+                  ? 'അഡ്മിൻ' 
+                  : userIsEmployee 
+                  ? 'ജീവനക്കാരൻ' 
+                  : userIsViewer
+                  ? 'നിരീക്ഷകൻ'
+                  : 'മെമ്പർ'}
               </span>
 
               <span className="font-bold text-white truncate">{loggedInUser.name}</span>

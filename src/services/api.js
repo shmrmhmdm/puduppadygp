@@ -92,6 +92,7 @@ export const isAdmin = (user) => {
 export const isEmployee = (user) => {
   if (!user) return false;
   const role = String(user.role || '').toLowerCase();
+  if (role === 'viewer' || role === 'monitor' || role === 'നിരീക്ഷകൻ') return false;
   return role === 'employee' || role === 'clerk' || role === 'ജീവനക്കാരൻ' || role === 'admin';
 };
 
@@ -99,6 +100,19 @@ export const isWardMember = (user) => {
   if (!user) return false;
   const role = String(user.role || '').toLowerCase();
   return role === 'ward member' || role === 'member' || role === 'മെമ്പർ';
+};
+
+export const isViewer = (user) => {
+  if (!user) return false;
+  const role = String(user.role || '').toLowerCase();
+  return (
+    role === 'viewer' ||
+    role === 'monitor' ||
+    role === 'supervisor' ||
+    role === 'observer' ||
+    role === 'നിരീക്ഷകൻ' ||
+    role === 'സ്റ്റാറ്റ്സ്'
+  );
 };
 
 // Beneficiaries Cache

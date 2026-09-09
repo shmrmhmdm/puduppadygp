@@ -10,6 +10,7 @@ import SettingsModal from './components/SettingsModal';
 import ScriptModal from './components/ScriptModal';
 import ExportModal from './components/ExportModal';
 import LoginScreen from './components/LoginScreen';
+import AnalyticsDashboard from './components/AnalyticsDashboard';
 import Toast from './components/Toast';
 import { 
   fetchBeneficiaries, 
@@ -25,7 +26,8 @@ import {
   getCachedUsers,
   isAdmin,
   isEmployee,
-  isWardMember
+  isWardMember,
+  isViewer
 } from './services/api';
 import { 
   FileSpreadsheet, 
@@ -140,7 +142,9 @@ export default function App() {
     }
 
     // Default view based on role
-    if (isEmployee(user) && !isWardMember(user)) {
+    if (isViewer(user)) {
+      setCurrentView('stats');
+    } else if (isEmployee(user) && !isWardMember(user)) {
       setCurrentView('sevana');
     } else {
       setCurrentView('collection');
@@ -439,15 +443,24 @@ export default function App() {
           </div>
         ) : (
           <>
-            {/* View 1: Employee Sevana Sync Queue Dashboard */}
-            {currentView === 'sevana' && isEmployee(loggedInUser) ? (
+            {/* View 1: Analytics & Stats Dashboard */}
+            {currentView === 'stats' ? (
+              <AnalyticsDashboard
+                beneficiaries={beneficiaries}
+                users={users}
+                onRefresh={() => loadData(true)}
+                loading={loading}
+                currentUser={loggedInUser}
+              />
+            ) : currentView === 'sevana' && isEmployee(loggedInUser) ? (
+              /* View 2: Employee Sevana Sync Queue Dashboard */
               <EmployeeSevanaQueue
                 beneficiaries={beneficiaries}
                 onUpdateSevanaStatus={handleUpdateSevanaStatus}
                 currentUser={loggedInUser}
               />
             ) : (
-              /* View 2: Mobile Number Collection Portal */
+              /* View 3: Mobile Number Collection Portal */
               <>
                 {/* Dynamic Ward Selector */}
                 <WardSelector
@@ -470,6 +483,7 @@ export default function App() {
                   beneficiaries={beneficiaries}
                   selectedWard={selectedWard}
                   onSaveMobile={handleSaveMobile}
+                  isReadOnly={isViewer(loggedInUser)}
                 />
               </>
             )}

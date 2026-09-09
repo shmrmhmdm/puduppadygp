@@ -97,70 +97,72 @@ export default function LoginScreen({
         </p>
       </div>
 
-      {/* Login Box with Eye-Friendly Calm Colors */}
-      <div className="w-full max-w-sm bg-white text-slate-800 rounded-3xl shadow-xl shadow-slate-200/60 p-6 sm:p-8 border border-slate-200/90">
-        <div className="flex items-center justify-center gap-2 mb-5">
-          <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
-            <Lock className="w-4 h-4" />
+      {/* Login Box with Animated Gradient Border */}
+      <div className="w-full max-w-sm animated-gradient-border-wrapper">
+        <div className="card-inner p-6 sm:p-8 text-slate-800">
+          <div className="flex items-center justify-center gap-2 mb-5">
+            <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
+              <Lock className="w-4 h-4" />
+            </div>
+            <h2 className="text-lg font-black text-slate-800">
+              ലോഗിൻ
+            </h2>
           </div>
-          <h2 className="text-lg font-black text-slate-800">
-            ലോഗിൻ
-          </h2>
-        </div>
 
-        <form onSubmit={handleLogin} className="space-y-4">
-          <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">
-              മൊബൈൽ നമ്പർ:
-            </label>
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                മൊബൈൽ നമ്പർ:
+              </label>
 
-            <div className="relative">
-              <div className="absolute left-3.5 top-1/2 -translate-y-1/2 flex items-center gap-1 text-slate-500 font-bold text-sm border-r border-slate-200 pr-2">
-                <Phone className="w-4 h-4 text-emerald-700" />
-                <span>+91</span>
+              <div className="relative">
+                <div className="absolute left-3.5 top-1/2 -translate-y-1/2 flex items-center gap-1 text-slate-500 font-bold text-sm border-r border-slate-200 pr-2">
+                  <Phone className="w-4 h-4 text-emerald-700" />
+                  <span>+91</span>
+                </div>
+                <input
+                  type="tel"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={10}
+                  value={mobileInput}
+                  onChange={handleInputChange}
+                  placeholder="98XXXXXXXX"
+                  className={`w-full pl-18 pr-4 py-3 bg-slate-50 border rounded-xl text-base font-black text-slate-800 tracking-wider placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:bg-white transition-all ${
+                    errorMsg ? 'border-rose-300 bg-rose-50/50' : 'border-slate-300'
+                  }`}
+                  autoFocus
+                />
               </div>
-              <input
-                type="tel"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                maxLength={10}
-                value={mobileInput}
-                onChange={handleInputChange}
-                placeholder="98XXXXXXXX"
-                className={`w-full pl-18 pr-4 py-3 bg-slate-50 border rounded-xl text-base font-black text-slate-800 tracking-wider placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:bg-white transition-all ${
-                  errorMsg ? 'border-rose-300 bg-rose-50/50' : 'border-slate-300'
-                }`}
-                autoFocus
-              />
+
+              {errorMsg && (
+                <div className="flex items-start gap-1.5 text-xs text-rose-700 font-semibold mt-2 leading-relaxed bg-rose-50 p-2.5 rounded-xl border border-rose-200">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                  <span>{errorMsg}</span>
+                </div>
+              )}
             </div>
 
-            {errorMsg && (
-              <div className="flex items-start gap-1.5 text-xs text-rose-700 font-semibold mt-2 leading-relaxed bg-rose-50 p-2.5 rounded-xl border border-rose-200">
-                <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-                <span>{errorMsg}</span>
-              </div>
-            )}
-          </div>
-
-          {/* Login Button with Soft Eye-Friendly Emerald */}
-          <button
-            type="submit"
-            disabled={isLoading || mobileInput.length !== 10}
-            className="w-full py-3 bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 text-white font-black text-sm rounded-xl shadow-md shadow-emerald-900/10 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span>പരിശോധിക്കുന്നു...</span>
-              </>
-            ) : (
-              <>
-                <LogIn className="w-4 h-4" />
-                <span>ലോഗിൻ ചെയ്യുക</span>
-              </>
-            )}
-          </button>
-        </form>
+            {/* Login Button with Soft Eye-Friendly Emerald */}
+            <button
+              type="submit"
+              disabled={isLoading || mobileInput.length !== 10}
+              className="w-full py-3 bg-emerald-700 hover:bg-emerald-800 active:bg-emerald-900 text-white font-black text-sm rounded-xl shadow-md shadow-emerald-900/10 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>പരിശോധിക്കുന്നു...</span>
+                </>
+              ) : (
+                <>
+                  <LogIn className="w-4 h-4" />
+                  <span>ലോഗിൻ ചെയ്യുക</span>
+                </>
+              )}
+            </button>
+          </form>
+        </div>
       </div>
 
       <div className="mt-8 text-center space-y-1">

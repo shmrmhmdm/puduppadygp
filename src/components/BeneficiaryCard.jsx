@@ -10,7 +10,8 @@ import {
   AlertCircle, 
   PhoneCall, 
   X,
-  UserCheck
+  UserCheck,
+  Clock
 } from 'lucide-react';
 import { PENSION_SCHEMES } from '../services/mockData';
 
@@ -18,7 +19,8 @@ export default function BeneficiaryCard({
   beneficiary, 
   activeTab, 
   onSaveMobile, 
-  showWard = false 
+  showWard = false,
+  isReadOnly = false
 }) {
   const [mobileInput, setMobileInput] = useState(beneficiary.mobile_no || '');
   const [isEditing, setIsEditing] = useState(false);
@@ -142,7 +144,42 @@ export default function BeneficiaryCard({
         )}
 
         {/* Action Area */}
-        {isPending || isEditing ? (
+        {isReadOnly ? (
+          /* Read Only Mode for Viewer Role */
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 flex items-center justify-between gap-2">
+            {isPending ? (
+              <div className="flex items-center gap-2 text-xs font-bold text-amber-800">
+                <Clock className="w-4 h-4 text-amber-600 shrink-0" />
+                <span>മൊബൈൽ നമ്പർ ശേഖരിക്കാൻ ബാക്കിയുണ്ട് (Pending)</span>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between w-full gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="w-7 h-7 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0">
+                    <CheckCircle2 className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <span className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider block">
+                      രേഖപ്പെടുത്തിയ നമ്പർ
+                    </span>
+                    <span className="text-sm font-extrabold text-slate-900 font-mono block">
+                      +91 {beneficiary.mobile_no}
+                    </span>
+                  </div>
+                </div>
+
+                <a
+                  href={`tel:${beneficiary.mobile_no}`}
+                  title="വിളിക്കുക"
+                  className="py-1.5 px-3 text-emerald-800 bg-white hover:bg-emerald-100 border border-emerald-300 rounded-xl text-xs font-bold flex items-center gap-1 shadow-2xs shrink-0"
+                >
+                  <PhoneCall className="w-3.5 h-3.5" />
+                  <span>വിളിക്കുക</span>
+                </a>
+              </div>
+            )}
+          </div>
+        ) : isPending || isEditing ? (
           /* Mobile Input Form */
           <form onSubmit={handleSave} className="space-y-2 pt-1">
             <label className="block text-xs font-bold text-slate-700">

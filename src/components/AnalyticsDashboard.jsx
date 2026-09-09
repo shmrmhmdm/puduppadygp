@@ -11,13 +11,14 @@ import {
   Filter, 
   Building2, 
   Layers, 
-  ArrowUpRight,
-  ShieldCheck,
   RefreshCw,
-  PhoneCall,
-  UserCheck
+  UserCheck,
+  Trophy,
+  Medal,
+  Sparkles,
+  Calendar,
+  Smartphone
 } from 'lucide-react';
-import { PENSION_SCHEMES } from '../services/mockData';
 
 export default function AnalyticsDashboard({ 
   beneficiaries = [], 
@@ -28,7 +29,7 @@ export default function AnalyticsDashboard({
 }) {
   const [selectedWardFilter, setSelectedWardFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState('wards'); // 'wards' | 'schemes' | 'beneficiaries'
+  const [activeTab, setActiveTab] = useState('updated_by'); // 'updated_by' | 'wards' | 'schemes' | 'beneficiaries'
 
   // Filter beneficiaries by selected ward
   const filteredBeneficiaries = useMemo(() => {
@@ -66,7 +67,79 @@ export default function AnalyticsDashboard({
     };
   }, [filteredBeneficiaries]);
 
-  // Ward-Wise Detailed Statistics (1 to 25)
+  // 1. "Updated By" Detailed Statistics (Who completed how many records)
+  const updatedByData = useMemo(() => {
+    const userMap = new Map();
+    let totalUpdated = 0;
+
+    filteredBeneficiaries.forEach((b) => {
+      if (b.status === 'completed' && b.mobile_no) {
+        totalUpdated += 1;
+        const updaterRaw = (b.updated_by && b.updated_by.trim()) ? b.updated_by.trim() : 'നേരിട്ട് ചേർത്തത് (Direct / Other)';
+        
+        const current = userMap.get(updaterRaw) || {
+          name: updaterRaw,
+          completed: 0,
+          wards: new Set(),
+          latestTimestamp: null,
+          sevanaSynced: 0,
+        };
+
+        current.completed += 1;
+        if (b.ward) current.wards.add(b.ward);
+        if (b.sevana_status === 'synced') current.sevanaSynced += 1;
+
+        if (b.updated_at) {
+          const t = new Date(b.updated_at).getTime();
+          if (!current.latestTimestamp || (!isNaN(t) && t > current.latestTimestamp)) {
+            current.latestTimestamp = t;
+          }
+        }
+
+        userMap.set(updaterRaw, current);
+      }
+    });
+
+    const list = Array.from(userMap.values()).map((u) => {
+      const percent = totalUpdated > 0 ? Math.round((u.completed / totalUpdated) * 100) : 0;
+      const totalPercent = stats.total > 0 ? Math.round((u.completed / stats.total) * 100) : 0;
+      const wardArray = Array.from(u.wards).sort((a, b) => a - b);
+      
+      let formattedDate = 'ലഭ്യമല്ല';
+      if (u.latestTimestamp) {
+        try {
+          formattedDate = new Date(u.latestTimestamp).toLocaleString('ml-IN', {
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          });
+        } catch (e) {
+          formattedDate = 'രേഖപ്പെടുത്തി';
+        }
+      }
+
+      return {
+        ...u,
+        percent,
+        totalPercent,
+        wardCount: wardArray.length,
+        wardsText: wardArray.length > 0 ? wardArray.join(', ') : 'All',
+        latestDateText: formattedDate
+      };
+    });
+
+    // Sort descending by highest completion count
+    list.sort((a, b) => b.completed - a.completed);
+
+    return {
+      list,
+      totalUpdated,
+      uniqueContributorsCount: list.length
+    };
+  }, [filteredBeneficiaries, stats.total]);
+
+  // 2. Ward-Wise Detailed Statistics (1 to 25)
   const wardStatsList = useMemo(() => {
     const list = [];
     const totalWards = 25;
@@ -101,7 +174,7 @@ export default function AnalyticsDashboard({
     return list;
   }, [beneficiaries, users]);
 
-  // Scheme-Wise Statistics
+  // 3. Scheme-Wise Statistics
   const schemeStatsList = useMemo(() => {
     const schemeMap = new Map();
 
@@ -136,7 +209,7 @@ export default function AnalyticsDashboard({
     }));
   }, [filteredBeneficiaries]);
 
-  // Read-only Search for beneficiaries
+  // 4. Read-only Search for beneficiaries
   const searchedBeneficiaries = useMemo(() => {
     if (!searchQuery.trim()) return [];
     const q = searchQuery.toLowerCase().trim();
@@ -146,9 +219,10 @@ export default function AnalyticsDashboard({
         (b.name_en && b.name_en.toLowerCase().includes(q)) ||
         (b.beneficiary_id && String(b.beneficiary_id).toLowerCase().includes(q)) ||
         (b.mobile_no && String(b.mobile_no).includes(q)) ||
+        (b.updated_by && b.updated_by.toLowerCase().includes(q)) ||
         (b.ward && String(b.ward) === q)
       );
-    }).slice(0, 50); // limit to 50 for quick display
+    }).slice(0, 50);
   }, [filteredBeneficiaries, searchQuery]);
 
   return (
@@ -172,7 +246,7 @@ export default function AnalyticsDashboard({
               പെൻഷൻ പുരോഗതി സ്ഥിതിവിവരക്കണക്കുകൾ
             </h2>
             <p className="text-xs sm:text-sm text-slate-300 max-w-xl">
-              മൊബൈൽ നമ്പർ ശേഖരണം, സേവന പോർട്ടൽ സിങ്കിംഗ്, വാർഡ് തിരിച്ചുള്ള സമഗ്ര പുരോഗതി എന്നിവ തത്സമയം നിരീക്ഷിക്കുക.
+              ആരൊക്കെ എത്രയെണ്ണം രേഖപ്പെടുത്തി (Updated By), മൊബൈൽ ശേഖരണ പുരോഗതി, സേവന സിങ്കിംഗ് നിലവാരം എന്നിവ തത്സമയം നിരീക്ഷിക്കുക.
             </p>
           </div>
 
@@ -212,7 +286,7 @@ export default function AnalyticsDashboard({
         </div>
 
         <div className="text-xs font-bold text-slate-500 text-right">
-          തിരഞ്ഞെടുത്തത്: <span className="text-emerald-700 font-extrabold">{stats.total}</span> ഗുണഭോക്താക്കൾ
+          ആകെ കണ്ടെത്തിയത്: <span className="text-emerald-700 font-extrabold">{stats.total}</span> ഗുണഭോക്താക്കൾ
         </div>
       </div>
 
@@ -305,48 +379,277 @@ export default function AnalyticsDashboard({
       </div>
 
       {/* Navigation Tabs for Views */}
-      <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
+      <div className="flex items-center gap-1.5 sm:gap-2 border-b border-slate-200 pb-2 overflow-x-auto">
+        {/* Tab 1 (Primary): Updated By Performance */}
+        <button
+          type="button"
+          onClick={() => setActiveTab('updated_by')}
+          className={`px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all cursor-pointer shrink-0 ${
+            activeTab === 'updated_by'
+              ? 'bg-slate-900 text-white shadow-sm'
+              : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+          }`}
+        >
+          <UserCheck className="w-4 h-4 text-emerald-400" />
+          <span>ആരൊക്കെ എത്ര ചെയ്തു (Updated By)</span>
+          <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${
+            activeTab === 'updated_by' ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-700'
+          }`}>
+            {updatedByData.list.length}
+          </span>
+        </button>
+
+        {/* Tab 2: Ward-Wise */}
         <button
           type="button"
           onClick={() => setActiveTab('wards')}
-          className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all cursor-pointer ${
+          className={`px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all cursor-pointer shrink-0 ${
             activeTab === 'wards'
               ? 'bg-slate-900 text-white shadow-sm'
               : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
           }`}
         >
           <Building2 className="w-4 h-4" />
-          <span>വാർഡ് തിരിച്ചുള്ള റിപ്പോർട്ട് (Ward Progress)</span>
+          <span>വാർഡ് തിരിച്ചുള്ള റിപ്പോർട്ട്</span>
         </button>
 
+        {/* Tab 3: Scheme-Wise */}
         <button
           type="button"
           onClick={() => setActiveTab('schemes')}
-          className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all cursor-pointer ${
+          className={`px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all cursor-pointer shrink-0 ${
             activeTab === 'schemes'
               ? 'bg-slate-900 text-white shadow-sm'
               : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
           }`}
         >
           <Layers className="w-4 h-4" />
-          <span>പെൻഷൻ തരം തിരിച്ച് (Schemes)</span>
+          <span>പെൻഷൻ തരം തിരിച്ച്</span>
         </button>
 
+        {/* Tab 4: Search Status */}
         <button
           type="button"
           onClick={() => setActiveTab('beneficiaries')}
-          className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all cursor-pointer ${
+          className={`px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all cursor-pointer shrink-0 ${
             activeTab === 'beneficiaries'
               ? 'bg-slate-900 text-white shadow-sm'
               : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
           }`}
         >
           <Search className="w-4 h-4" />
-          <span>ഗുണഭോക്താവിനെ തിരയുക (Search Status)</span>
+          <span>സ്റ്റാറ്റസ് പരിശോധിക്കുക</span>
         </button>
       </div>
 
-      {/* Tab 1: Ward-Wise Performance Table */}
+      {/* Tab 1 View: "Updated By" Performance Leaderboard */}
+      {activeTab === 'updated_by' && (
+        <div className="space-y-4">
+          {/* Top 3 Spotlight Cards if available */}
+          {updatedByData.list.length >= 3 && (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {/* #2 Silver */}
+              <div className="bg-slate-50 border border-slate-200/90 rounded-2xl p-4 text-center order-2 sm:order-1 flex flex-col justify-between">
+                <div>
+                  <div className="w-10 h-10 rounded-full bg-slate-200 text-slate-700 mx-auto flex items-center justify-center font-black text-sm mb-2 shadow-xs">
+                    🥈 #2
+                  </div>
+                  <h4 className="font-extrabold text-sm text-slate-900 truncate">
+                    {updatedByData.list[1].name}
+                  </h4>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    വാർഡുകൾ: {updatedByData.list[1].wardsText}
+                  </p>
+                </div>
+                <div className="mt-3 pt-2 border-t border-slate-200">
+                  <span className="text-xl font-black text-slate-800">
+                    {updatedByData.list[1].completed}
+                  </span>
+                  <span className="text-xs text-slate-500 block">രേഖപ്പെടുത്തിയവ ({updatedByData.list[1].percent}%)</span>
+                </div>
+              </div>
+
+              {/* #1 Gold Champion */}
+              <div className="bg-gradient-to-b from-amber-50 to-emerald-50/60 border-2 border-amber-300 rounded-2xl p-4 text-center order-1 sm:order-2 shadow-md flex flex-col justify-between relative overflow-hidden">
+                <div className="absolute top-2 right-2">
+                  <Sparkles className="w-4 h-4 text-amber-500 animate-pulse" />
+                </div>
+                <div>
+                  <div className="w-12 h-12 rounded-full bg-amber-400 text-slate-950 mx-auto flex items-center justify-center font-black text-base mb-2 shadow-sm">
+                    🏆 #1
+                  </div>
+                  <h4 className="font-black text-base text-slate-950 truncate">
+                    {updatedByData.list[0].name}
+                  </h4>
+                  <p className="text-[11px] font-semibold text-emerald-800 mt-0.5">
+                    വാർഡുകൾ: {updatedByData.list[0].wardsText}
+                  </p>
+                </div>
+                <div className="mt-3 pt-2 border-t border-amber-200">
+                  <span className="text-2xl font-black text-emerald-800">
+                    {updatedByData.list[0].completed}
+                  </span>
+                  <span className="text-xs font-bold text-emerald-900 block">ഏറ്റവും കൂടുതൽ രേഖപ്പെടുത്തിയത് ({updatedByData.list[0].percent}%)</span>
+                </div>
+              </div>
+
+              {/* #3 Bronze */}
+              <div className="bg-slate-50 border border-slate-200/90 rounded-2xl p-4 text-center order-3 flex flex-col justify-between">
+                <div>
+                  <div className="w-10 h-10 rounded-full bg-amber-100 text-amber-800 mx-auto flex items-center justify-center font-black text-sm mb-2 shadow-xs">
+                    🥉 #3
+                  </div>
+                  <h4 className="font-extrabold text-sm text-slate-900 truncate">
+                    {updatedByData.list[2].name}
+                  </h4>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    വാർഡുകൾ: {updatedByData.list[2].wardsText}
+                  </p>
+                </div>
+                <div className="mt-3 pt-2 border-t border-slate-200">
+                  <span className="text-xl font-black text-slate-800">
+                    {updatedByData.list[2].completed}
+                  </span>
+                  <span className="text-xs text-slate-500 block">രേഖപ്പെടുത്തിയവ ({updatedByData.list[2].percent}%)</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Detailed Updated By List Table */}
+          <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+            <div className="p-4 sm:p-5 bg-slate-50 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <h3 className="font-extrabold text-sm sm:text-base text-slate-900 flex items-center gap-2">
+                  <UserCheck className="w-4 h-4 text-emerald-700" />
+                  <span>അപ്ഡേറ്റ് ചെയ്തവരുടെ പൂർണ്ണ വിവരങ്ങൾ (Updated By Data)</span>
+                </h3>
+                <p className="text-xs text-slate-500">
+                  ആകെ രേഖപ്പെടുത്തിയ {updatedByData.totalUpdated} എണ്ണത്തിൽ ഓരോരുത്തരുടെയും പങ്കാളിത്തം
+                </p>
+              </div>
+              <span className="text-xs font-bold text-emerald-800 bg-emerald-100/80 px-3 py-1 rounded-xl border border-emerald-300 self-start sm:self-auto">
+                ആകെ {updatedByData.list.length} വ്യക്തികൾ / അക്കൗണ്ടുകൾ
+              </span>
+            </div>
+
+            {updatedByData.list.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="bg-slate-100/80 text-slate-700 font-bold border-b border-slate-200 text-[11px] uppercase tracking-wider">
+                      <th className="p-3 sm:p-3.5 text-center w-12">റാങ്ക്</th>
+                      <th className="p-3 sm:p-3.5">അപ്ഡേറ്റ് ചെയ്ത വ്യക്തി / റോൾ</th>
+                      <th className="p-3 sm:p-3.5 text-center">ചെയ്ത എണ്ണം</th>
+                      <th className="p-3 sm:p-3.5 min-w-[150px]">പങ്കാളിത്ത ശതമാനം</th>
+                      <th className="p-3 sm:p-3.5">വാർഡുകൾ</th>
+                      <th className="p-3 sm:p-3.5 text-center">സേവന സിങ്ക്</th>
+                      <th className="p-3 sm:p-3.5 text-right">അവസാന അപ്ഡേറ്റ്</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {updatedByData.list.map((item, idx) => {
+                      const isTop1 = idx === 0;
+                      const isTop3 = idx < 3;
+
+                      return (
+                        <tr 
+                          key={idx} 
+                          className={`hover:bg-slate-50/90 transition-colors ${
+                            isTop1 ? 'bg-emerald-50/20' : ''
+                          }`}
+                        >
+                          {/* Rank */}
+                          <td className="p-3 sm:p-3.5 text-center font-black">
+                            <span className={`w-7 h-7 rounded-xl inline-flex items-center justify-center font-bold text-xs ${
+                              idx === 0 
+                                ? 'bg-amber-400 text-slate-950 font-black shadow-xs' 
+                                : idx === 1 
+                                ? 'bg-slate-300 text-slate-800' 
+                                : idx === 2 
+                                ? 'bg-amber-100 text-amber-900 border border-amber-300' 
+                                : 'bg-slate-100 text-slate-600'
+                            }`}>
+                              {idx + 1}
+                            </span>
+                          </td>
+
+                          {/* Name / Role */}
+                          <td className="p-3 sm:p-3.5 font-bold text-slate-900 text-sm">
+                            <div className="flex items-center gap-2">
+                              <span>{item.name}</span>
+                              {isTop3 && (
+                                <span className="px-1.5 py-0.2 rounded-md bg-amber-100 text-amber-900 text-[9px] font-extrabold border border-amber-300">
+                                  Top {idx + 1}
+                                </span>
+                              )}
+                            </div>
+                          </td>
+
+                          {/* Completed Count */}
+                          <td className="p-3 sm:p-3.5 text-center font-black text-emerald-800 text-base">
+                            {item.completed}
+                          </td>
+
+                          {/* Progress Bar & Contribution % */}
+                          <td className="p-3 sm:p-3.5">
+                            <div className="flex items-center gap-2">
+                              <div className="flex-1 bg-slate-200 rounded-full h-2.5 overflow-hidden">
+                                <div
+                                  className={`h-full rounded-full ${
+                                    isTop1 
+                                      ? 'bg-gradient-to-r from-emerald-600 to-teal-500' 
+                                      : 'bg-emerald-600'
+                                  }`}
+                                  style={{ width: `${item.percent}%` }}
+                                ></div>
+                              </div>
+                              <span className="font-extrabold text-slate-900 text-xs shrink-0 w-10 text-right">
+                                {item.percent}%
+                              </span>
+                            </div>
+                            <span className="text-[10px] text-slate-400 block mt-0.5">
+                              ആകെ പെൻഷൻകാരിൽ {item.totalPercent}%
+                            </span>
+                          </td>
+
+                          {/* Wards Covered */}
+                          <td className="p-3 sm:p-3.5 text-slate-700 font-medium">
+                            <span className="inline-block px-2 py-0.5 rounded-md bg-slate-100 text-slate-800 text-xs font-semibold">
+                              വാർഡ് {item.wardsText}
+                            </span>
+                          </td>
+
+                          {/* Sevana Synced */}
+                          <td className="p-3 sm:p-3.5 text-center">
+                            <span className="font-bold text-indigo-700 text-sm">{item.sevanaSynced}</span>
+                          </td>
+
+                          {/* Last Active Timestamp */}
+                          <td className="p-3 sm:p-3.5 text-right text-slate-500 font-medium">
+                            <div className="flex items-center justify-end gap-1 text-[11px]">
+                              <Calendar className="w-3 h-3 text-slate-400" />
+                              <span>{item.latestDateText}</span>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="p-10 text-center text-slate-500 space-y-2">
+                <Clock className="w-8 h-8 text-slate-400 mx-auto" />
+                <p className="text-sm font-bold">ഇതുവരെ ആരും വിവരങ്ങൾ അപ്ഡേറ്റ് ചെയ്തിട്ടില്ല.</p>
+                <p className="text-xs text-slate-400">മൊബൈൽ നമ്പറുകൾ രേഖപ്പെടുത്തി സേവ് ചെയ്യുമ്പോൾ ഇവിടെ ഓരോരുത്തരുടെയും കണക്കുകൾ തത്സമയം കാണാം.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Tab 2 View: Ward-Wise Performance Table */}
       {activeTab === 'wards' && (
         <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
           <div className="p-4 sm:p-5 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
@@ -463,7 +766,7 @@ export default function AnalyticsDashboard({
         </div>
       )}
 
-      {/* Tab 2: Scheme-Wise Breakdown */}
+      {/* Tab 3 View: Scheme-Wise Breakdown */}
       {activeTab === 'schemes' && (
         <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-5 sm:p-6 space-y-4">
           <h3 className="font-extrabold text-base text-slate-900 flex items-center gap-2">
@@ -519,7 +822,7 @@ export default function AnalyticsDashboard({
         </div>
       )}
 
-      {/* Tab 3: Search Beneficiary Status (Read-Only) */}
+      {/* Tab 4 View: Search Beneficiary Status (Read-Only) */}
       {activeTab === 'beneficiaries' && (
         <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-5 sm:p-6 space-y-4">
           <div>
@@ -528,7 +831,7 @@ export default function AnalyticsDashboard({
               <span>ഗുണഭോക്താവിന്റെ നിലവിലെ സ്റ്റാറ്റസ് തിരയുക</span>
             </h3>
             <p className="text-xs text-slate-500">
-              പേര്, പെൻഷൻ നമ്പർ, മൊബൈൽ നമ്പർ അല്ലെങ്കിൽ വാർഡ് നൽകി സ്റ്റാറ്റസ് പരിശോധിക്കുക.
+              പേര്, പെൻഷൻ നമ്പർ, മൊബൈൽ നമ്പർ, വാർഡ് അല്ലെങ്കിൽ അപ്ഡേറ്റ് ചെയ്ത ആളുടെ പേര് നൽകി പരിശോധിക്കുക.
             </p>
           </div>
 
@@ -538,7 +841,7 @@ export default function AnalyticsDashboard({
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="ഉദാ: ഫാത്തിമ, 10245, 9847..."
+              placeholder="ഉദാ: ഫാത്തിമ, 10245, സുരേഷ് ബാബു, 9847..."
               className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-2xl text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-600"
             />
           </div>
@@ -556,7 +859,7 @@ export default function AnalyticsDashboard({
                     const isSynced = b.sevana_status === 'synced';
 
                     return (
-                      <div key={b.beneficiary_id} className="p-3.5 bg-white hover:bg-slate-50 flex items-center justify-between gap-3">
+                      <div key={b.beneficiary_id} className="p-3.5 bg-white hover:bg-slate-50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                         <div>
                           <div className="flex items-center gap-2">
                             <span className="font-bold text-sm text-slate-900">{b.name_ml || b.name_en}</span>
@@ -567,9 +870,15 @@ export default function AnalyticsDashboard({
                           <div className="text-xs text-slate-500 mt-0.5">
                             പെൻഷൻ നമ്പർ: <span className="font-mono font-semibold">{b.beneficiary_id}</span> • {b.scheme_ml || b.scheme_name}
                           </div>
+                          {b.updated_by && (
+                            <div className="text-[11px] text-emerald-800 font-semibold mt-0.5 flex items-center gap-1">
+                              <UserCheck className="w-3 h-3 text-emerald-600" />
+                              <span>അപ്ഡേറ്റ് ചെയ്തത്: <strong>{b.updated_by}</strong></span>
+                            </div>
+                          )}
                         </div>
 
-                        <div className="flex items-center gap-2 shrink-0">
+                        <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
                           {isDone ? (
                             <span className="px-2.5 py-1 rounded-xl text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1 font-mono">
                               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
